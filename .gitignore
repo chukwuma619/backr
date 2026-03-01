@@ -40,3 +40,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 BACKR_PROJECT_DESCRIPTION.md
+BACKR_PROJECT_STAGES.md
