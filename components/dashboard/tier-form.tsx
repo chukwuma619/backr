@@ -89,6 +89,15 @@ export function TierForm({
       });
       return;
     }
+    if (!tier) {
+      form.reset({
+        name: "",
+        description: "",
+        priceAmount: "",
+        priceCurrency: "CKB",
+        billingInterval: "monthly",
+      });
+    }
     onSuccess?.();
   }
 

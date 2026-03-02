@@ -49,6 +49,10 @@ export function PerkForm({
 
   async function onSubmit(values: FormValues) {
     setError(null);
+    if (!perk && !tierId) {
+      setError("Tier is required");
+      return;
+    }
     const formData = new FormData();
     formData.set("description", values.description.trim());
     if (values.type) formData.set("type", values.type.trim());
@@ -68,6 +72,9 @@ export function PerkForm({
         });
       });
       return;
+    }
+    if (!perk) {
+      form.reset({ description: "", type: "" });
     }
     onSuccess?.();
   }

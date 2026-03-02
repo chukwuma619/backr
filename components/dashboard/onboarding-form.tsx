@@ -29,8 +29,9 @@ const schema = z.object({
     .string()
     .min(2, "Slug must be at least 2 characters")
     .max(64, "Slug must be at most 64 characters")
-    .regex(
-      /^[a-z0-9-_]+$/,
+    .transform((s) => s.trim().toLowerCase())
+    .refine(
+      (s) => /^[a-z0-9-_]+$/.test(s),
       "Slug can only contain lowercase letters, numbers, hyphens, and underscores"
     ),
   displayName: z

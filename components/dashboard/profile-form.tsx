@@ -29,9 +29,13 @@ import type { Creator } from "@/lib/db/schema";
 const schema = z.object({
   slug: z
     .string()
-    .min(2)
-    .max(64)
-    .regex(/^[a-z0-9-_]+$/),
+    .min(2, "Slug must be at least 2 characters")
+    .max(64, "Slug must be at most 64 characters")
+    .transform((s) => s.trim().toLowerCase())
+    .refine(
+      (s) => /^[a-z0-9-_]+$/.test(s),
+      "Slug can only contain lowercase letters, numbers, hyphens, and underscores"
+    ),
   displayName: z.string().min(1).max(200),
   bio: z.string().max(1000).optional(),
   avatarUrl: z.string().max(500).optional(),
