@@ -41,3 +41,5 @@ yarn-error.log*
 next-env.d.ts
 BACKR_PROJECT_DESCRIPTION.md
 BACKR_PROJECT_STAGES.md
+# next-agents-md
+.next-docs/
