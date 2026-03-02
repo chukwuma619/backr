@@ -52,6 +52,28 @@ export const perks = pgTable("perks", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const patronage = pgTable("patronage", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  patronUserId: uuid("patron_user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  creatorId: uuid("creator_id")
+    .notNull()
+    .references(() => creators.id, { onDelete: "cascade" }),
+  tierId: uuid("tier_id")
+    .notNull()
+    .references(() => tiers.id, { onDelete: "cascade" }),
+  amount: text("amount").notNull(),
+  currency: text("currency").notNull().default("CKB"),
+  status: text("status").notNull().default("active"),
+  nextDueAt: timestamp("next_due_at"),
+  lastPaymentAt: timestamp("last_payment_at"),
+  ckbTxHash: text("ckb_tx_hash"),
+  fiberTxRef: text("fiber_tx_ref"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const usersRelations = relations(users, ({ one }) => ({
   creator: one(creators),
 }));
@@ -59,11 +81,28 @@ export const usersRelations = relations(users, ({ one }) => ({
 export const creatorsRelations = relations(creators, ({ one, many }) => ({
   user: one(users, { fields: [creators.userId], references: [users.id] }),
   tiers: many(tiers),
+  patronage: many(patronage),
+}));
+
+export const patronageRelations = relations(patronage, ({ one }) => ({
+  patronUser: one(users, {
+    fields: [patronage.patronUserId],
+    references: [users.id],
+  }),
+  creator: one(creators, {
+    fields: [patronage.creatorId],
+    references: [creators.id],
+  }),
+  tier: one(tiers, {
+    fields: [patronage.tierId],
+    references: [tiers.id],
+  }),
 }));
 
 export const tiersRelations = relations(tiers, ({ one, many }) => ({
   creator: one(creators, { fields: [tiers.creatorId], references: [creators.id] }),
   perks: many(perks),
+  patronage: many(patronage),
 }));
 
 export const perksRelations = relations(perks, ({ one }) => ({
@@ -78,3 +117,5 @@ export type Tier = typeof tiers.$inferSelect;
 export type NewTier = typeof tiers.$inferInsert;
 export type Perk = typeof perks.$inferSelect;
 export type NewPerk = typeof perks.$inferInsert;
+export type Patronage = typeof patronage.$inferSelect;
+export type NewPatronage = typeof patronage.$inferInsert;

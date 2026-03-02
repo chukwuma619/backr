@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ProfileForm } from "@/components/dashboard/profile-form";
 import { DashboardTiersSection } from "@/components/dashboard/dashboard-tiers-section";
+import { EarningsSection } from "@/components/dashboard/earnings-section";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -55,18 +56,13 @@ export default async function DashboardPage() {
             </Link>
           </div>
 
-          <ProfileForm data={data}  />
+          <ProfileForm data={data} />
 
           <DashboardTiersSection creator={data} tiersAndPerks={tiersAndPerks} />
 
-          {/* <Card>
-            <CardHeader>
-              <CardTitle>Earnings</CardTitle>
-              <CardDescription>Coming in Stage 3</CardDescription>
-            </CardHeader>
-          </Card>
+          <EarningsSection creatorId={data.id} />
 
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle>Posts</CardTitle>
               <CardDescription>Coming in Stage 4</CardDescription>

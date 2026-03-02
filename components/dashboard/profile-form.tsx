@@ -64,7 +64,6 @@ export function ProfileForm({ data }: { data: Creator }) {
     formData.set("displayName", values.displayName.trim());
     if (values.bio) formData.set("bio", values.bio.trim());
     if (values.avatarUrl) formData.set("avatarUrl", values.avatarUrl.trim());
-
     const result = await updateCreator({} as never, formData);
 
     if (result?.message) {
