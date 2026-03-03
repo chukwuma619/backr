@@ -8,8 +8,10 @@ import {
 import {
   getPatronageStatsByCreatorId,
   getPatronsByCreatorId,
+  getEarningsOverTimeByCreatorId,
+  getTopTiersByCreatorId,
 } from "@/lib/db/queries";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 function truncateAddress(addr: string, head = 8, tail = 6) {
   if (addr.length <= head + tail) return addr;
@@ -17,10 +19,17 @@ function truncateAddress(addr: string, head = 8, tail = 6) {
 }
 
 export async function EarningsSection({ creatorId }: { creatorId: string }) {
-  const { data: stats, error: statsError } =
-    await getPatronageStatsByCreatorId(creatorId);
-  const { data: patrons, error: patronsError } =
-    await getPatronsByCreatorId(creatorId);
+  const [
+    { data: stats, error: statsError },
+    { data: patrons, error: patronsError },
+    { data: earningsOverTime },
+    { data: topTiers },
+  ] = await Promise.all([
+    getPatronageStatsByCreatorId(creatorId),
+    getPatronsByCreatorId(creatorId),
+    getEarningsOverTimeByCreatorId(creatorId),
+    getTopTiersByCreatorId(creatorId),
+  ]);
 
   if (statsError || patronsError) {
     return (
@@ -57,6 +66,44 @@ export async function EarningsSection({ creatorId }: { creatorId: string }) {
             <p className="text-2xl font-semibold">{patronCount}</p>
           </div>
         </div>
+
+        {earningsOverTime && earningsOverTime.length > 0 && (
+          <div>
+            <h3 className="text-sm font-medium mb-2">Earnings over time</h3>
+            <ul className="space-y-2">
+              {earningsOverTime.map((row) => (
+                <li
+                  key={row.month}
+                  className="flex items-center justify-between text-sm py-2 border-b last:border-0"
+                >
+                  <span className="text-muted-foreground">
+                    {format(parseISO(`${row.month}-01`), "MMM yyyy")}
+                  </span>
+                  <span>{row.total} CKB</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {topTiers && topTiers.length > 0 && (
+          <div>
+            <h3 className="text-sm font-medium mb-2">Top tiers</h3>
+            <ul className="space-y-2">
+              {topTiers.map((row) => (
+                <li
+                  key={row.tierName}
+                  className="flex items-center justify-between text-sm py-2 border-b last:border-0"
+                >
+                  <span>{row.tierName}</span>
+                  <span className="text-muted-foreground">
+                    {row.patronCount} patrons · {row.totalAmount} CKB
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {patrons && patrons.length > 0 ? (
           <div>

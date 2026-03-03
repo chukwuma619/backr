@@ -1,23 +1,55 @@
 import { db } from "@/lib/db";
-import { creators, tiers, perks, patronage, users } from "@/lib/db/schema";
-import { desc, eq, sql } from "drizzle-orm";
+import { calculatePlatformFee } from "@/lib/platform-fee";
+import {
+  creators,
+  tiers,
+  perks,
+  patronage,
+  users,
+  posts,
+} from "@/lib/db/schema";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 
 export async function getCreatorBySlug(slug: string) {
   try {
-    const [creatorRow] = await db
-      .select()
+    const [row] = await db
+      .select({ creator: creators })
       .from(creators)
       .where(eq(creators.slug, slug))
       .limit(1);
-    if (!creatorRow) return { data: null, error: null };
+    if (!row) return { data: null, error: null };
 
     return {
-      data: creatorRow,
+      data: row.creator,
       error: null,
     };
   } catch (error) {
     console.error(error);
     return { data: null, error: error as Error };
+  }
+}
+
+export async function getAllCreatorsForDiscovery(search?: string) {
+  try {
+    const term = search?.trim() ? `%${search.trim()}%` : null;
+    const rows = await db
+      .select()
+      .from(creators)
+      .where(
+        term
+          ? or(
+              ilike(creators.displayName, term),
+              ilike(creators.slug, term),
+              ilike(creators.bio, term)
+            )
+          : undefined
+      )
+      .orderBy(desc(creators.createdAt));
+
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
   }
 }
 
@@ -73,9 +105,10 @@ export async function createPatronage(data: {
   amount: string;
   currency?: string;
   billingInterval?: string;
-  ckbTxHash?: string;
+  fiberTxRef?: string;
 }) {
   try {
+    const platformFeeAmount = calculatePlatformFee(data.amount);
     const [row] = await db
       .insert(patronage)
       .values({
@@ -84,10 +117,11 @@ export async function createPatronage(data: {
         tierId: data.tierId,
         amount: data.amount,
         currency: data.currency ?? "CKB",
+        platformFeeAmount: platformFeeAmount !== "0" ? platformFeeAmount : null,
         status: "active",
         lastPaymentAt: new Date(),
         nextDueAt: getNextDueDate(data.billingInterval ?? "monthly"),
-        ckbTxHash: data.ckbTxHash ?? null,
+        fiberTxRef: data.fiberTxRef ?? null,
       })
       .returning();
     return { data: row, error: null };
@@ -107,6 +141,51 @@ function getNextDueDate(interval: string): Date {
     d.setMonth(d.getMonth() + 1);
   }
   return d;
+}
+
+export async function getEarningsOverTimeByCreatorId(creatorId: string) {
+  try {
+    const rows = await db
+      .select({
+        month: sql<string>`TO_CHAR(${patronage.lastPaymentAt}, 'YYYY-MM')`,
+        total: sql<string>`SUM(CAST(${patronage.amount} AS NUMERIC))`,
+      })
+      .from(patronage)
+      .where(
+        and(
+          eq(patronage.creatorId, creatorId),
+          sql`${patronage.lastPaymentAt} IS NOT NULL`
+        )
+      )
+      .groupBy(sql`TO_CHAR(${patronage.lastPaymentAt}, 'YYYY-MM')`)
+      .orderBy(sql`TO_CHAR(${patronage.lastPaymentAt}, 'YYYY-MM') DESC`);
+
+    return { data: rows.slice(0, 12), error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getTopTiersByCreatorId(creatorId: string) {
+  try {
+    const rows = await db
+      .select({
+        tierName: tiers.name,
+        patronCount: sql<number>`COUNT(DISTINCT ${patronage.patronUserId})`,
+        totalAmount: sql<string>`COALESCE(SUM(CAST(${patronage.amount} AS NUMERIC)), 0)`,
+      })
+      .from(patronage)
+      .innerJoin(tiers, eq(patronage.tierId, tiers.id))
+      .where(eq(patronage.creatorId, creatorId))
+      .groupBy(tiers.id, tiers.name)
+      .orderBy(sql`COUNT(DISTINCT ${patronage.patronUserId}) DESC`);
+
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
 }
 
 export async function getPatronageStatsByCreatorId(creatorId: string) {
@@ -129,6 +208,188 @@ export async function getPatronageStatsByCreatorId(creatorId: string) {
   } catch (error) {
     console.error(error);
     return { data: null, error: error as Error };
+  }
+}
+
+export async function getPostsByCreatorId(creatorId: string) {
+  try {
+    const rows = await db
+      .select()
+      .from(posts)
+      .where(eq(posts.creatorId, creatorId))
+      .orderBy(desc(posts.publishedAt));
+
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getPostById(id: string) {
+  try {
+    const [row] = await db
+      .select()
+      .from(posts)
+      .where(eq(posts.id, id))
+      .limit(1);
+    return { data: row ?? null, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+}
+
+export async function canPatronAccessPost(
+  postId: string,
+  patronUserId: string
+): Promise<boolean> {
+  try {
+    const [post] = await db
+      .select({
+        creatorId: posts.creatorId,
+        minTierId: posts.minTierId,
+        minTierPrice: tiers.priceAmount,
+      })
+      .from(posts)
+      .innerJoin(tiers, eq(posts.minTierId, tiers.id))
+      .where(eq(posts.id, postId))
+      .limit(1);
+    if (!post) return false;
+
+    const [pat] = await db
+      .select({ tierPrice: tiers.priceAmount })
+      .from(patronage)
+      .innerJoin(tiers, eq(patronage.tierId, tiers.id))
+      .where(
+        and(
+          eq(patronage.creatorId, post.creatorId),
+          eq(patronage.patronUserId, patronUserId),
+          eq(patronage.status, "active")
+        )
+      )
+      .limit(1);
+    if (!pat) return false;
+
+    return parseFloat(pat.tierPrice) >= parseFloat(post.minTierPrice);
+  } catch {
+    return false;
+  }
+}
+
+export async function getGatedFeedForPatron(patronUserId: string) {
+  try {
+    const patronages = await db
+      .select({
+        creatorId: patronage.creatorId,
+        tierId: patronage.tierId,
+        tierPrice: tiers.priceAmount,
+      })
+      .from(patronage)
+      .innerJoin(tiers, eq(patronage.tierId, tiers.id))
+      .where(
+        and(
+          eq(patronage.patronUserId, patronUserId),
+          eq(patronage.status, "active")
+        )
+      );
+
+    const creatorIds = patronages.map((p) => p.creatorId);
+    if (creatorIds.length === 0) return { data: [], error: null };
+
+    const patronTierByCreator = new Map(
+      patronages.map((p) => [p.creatorId, { tierId: p.tierId, price: p.tierPrice }])
+    );
+
+    const allPosts = await db
+      .select({
+        post: posts,
+        creatorDisplayName: creators.displayName,
+        creatorSlug: creators.slug,
+        minTierId: posts.minTierId,
+        minTierPrice: tiers.priceAmount,
+        minTierName: tiers.name,
+      })
+      .from(posts)
+      .innerJoin(creators, eq(posts.creatorId, creators.id))
+      .innerJoin(tiers, eq(posts.minTierId, tiers.id))
+      .where(inArray(posts.creatorId, creatorIds))
+      .orderBy(desc(posts.publishedAt));
+
+    const data = allPosts
+      .filter((row) => {
+        const patronTier = patronTierByCreator.get(row.post.creatorId);
+        if (!patronTier) return false;
+        const patronPrice = parseFloat(patronTier.price);
+        const minPrice = parseFloat(row.minTierPrice);
+        return patronPrice >= minPrice;
+      })
+      .map(({ post, creatorDisplayName, creatorSlug, minTierName }) => ({
+        post,
+        creatorDisplayName,
+        creatorSlug,
+        minTierName,
+      }));
+
+    return { data, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getDuePatronagesForRenewal() {
+  try {
+    const rows = await db
+      .select({
+        patronage: patronage,
+        patronAddress: users.ckbAddress,
+        creatorDisplayName: creators.displayName,
+        creatorSlug: creators.slug,
+        tierName: tiers.name,
+        tierPrice: tiers.priceAmount,
+      })
+      .from(patronage)
+      .innerJoin(users, eq(patronage.patronUserId, users.id))
+      .innerJoin(creators, eq(patronage.creatorId, creators.id))
+      .innerJoin(tiers, eq(patronage.tierId, tiers.id))
+      .where(
+        and(
+          eq(patronage.status, "active"),
+          sql`${patronage.nextDueAt} IS NOT NULL`,
+          sql`${patronage.nextDueAt} <= NOW()`
+        )
+      );
+
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getPatronagesByUserId(patronUserId: string) {
+  try {
+    const rows = await db
+      .select({
+        patronage: patronage,
+        creatorDisplayName: creators.displayName,
+        creatorSlug: creators.slug,
+        creatorAvatarUrl: creators.avatarUrl,
+        tierName: tiers.name,
+        tierPrice: tiers.priceAmount,
+        tierCurrency: tiers.priceCurrency,
+      })
+      .from(patronage)
+      .innerJoin(creators, eq(patronage.creatorId, creators.id))
+      .innerJoin(tiers, eq(patronage.tierId, tiers.id))
+      .where(eq(patronage.patronUserId, patronUserId))
+      .orderBy(desc(patronage.lastPaymentAt));
+
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
   }
 }
 

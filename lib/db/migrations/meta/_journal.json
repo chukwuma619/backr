@@ -15,6 +15,27 @@
       "when": 1772490552310,
       "tag": "0001_lovely_harry_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772490990229,
+      "tag": "0002_gray_ultimo",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1772491217446,
+      "tag": "0003_wealthy_lyja",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1772491728154,
+      "tag": "0004_fuzzy_doorman",
+      "breakpoints": true
     }
   ]
 }

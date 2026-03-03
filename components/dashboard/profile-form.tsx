@@ -39,6 +39,7 @@ const schema = z.object({
   displayName: z.string().min(1).max(200),
   bio: z.string().max(1000).optional(),
   avatarUrl: z.string().max(500).optional(),
+  fiberNodeRpcUrl: z.union([z.string().url(), z.literal("")]).optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -54,6 +55,7 @@ export function ProfileForm({ data }: { data: Creator }) {
       displayName: data.displayName,
       bio: data.bio || "",
       avatarUrl: data.avatarUrl || "",
+      fiberNodeRpcUrl: data.fiberNodeRpcUrl || "",
     },
   });
 
@@ -64,6 +66,7 @@ export function ProfileForm({ data }: { data: Creator }) {
     formData.set("displayName", values.displayName.trim());
     if (values.bio) formData.set("bio", values.bio.trim());
     if (values.avatarUrl) formData.set("avatarUrl", values.avatarUrl.trim());
+    if (values.fiberNodeRpcUrl) formData.set("fiberNodeRpcUrl", values.fiberNodeRpcUrl.trim());
     const result = await updateCreator({} as never, formData);
 
     if (result?.message) {
@@ -138,6 +141,23 @@ export function ProfileForm({ data }: { data: Creator }) {
                   <FormLabel>Avatar URL (optional)</FormLabel>
                   <FormControl>
                     <Input type="url" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="fiberNodeRpcUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fiber node RPC URL (optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="url"
+                      placeholder="http://localhost:8227"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

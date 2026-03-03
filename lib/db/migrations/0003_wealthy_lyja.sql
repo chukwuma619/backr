@@ -1,0 +1,1 @@
+ALTER TABLE "patronage" ADD COLUMN "platform_fee_amount" text;

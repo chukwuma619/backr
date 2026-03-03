@@ -25,6 +25,7 @@ const createSchema = z.object({
     .max(200, "Display name must be at most 200 characters"),
   bio: z.string().max(1000).optional(),
   avatarUrl: z.string().max(500).optional(),
+  fiberNodeRpcUrl: z.union([z.string().url(), z.literal("")]).optional(),
 });
 
 const updateSchema = createSchema;
@@ -116,12 +117,14 @@ export async function updateCreator(
     displayName: formData.get("displayName") as string,
     bio: (formData.get("bio") as string) || undefined,
     avatarUrl: (formData.get("avatarUrl") as string) || undefined,
+    fiberNodeRpcUrl: (formData.get("fiberNodeRpcUrl") as string) || undefined,
   };
 
   const parsed = updateSchema.safeParse({
     ...raw,
     slug: raw.slug?.trim().toLowerCase(),
     displayName: raw.displayName?.trim(),
+    fiberNodeRpcUrl: raw.fiberNodeRpcUrl?.trim() || "",
   });
 
   if (!parsed.success) {
@@ -154,6 +157,9 @@ export async function updateCreator(
       displayName: parsed.data.displayName,
       bio: parsed.data.bio ?? null,
       avatarUrl: parsed.data.avatarUrl ?? null,
+      fiberNodeRpcUrl: parsed.data.fiberNodeRpcUrl?.trim()
+        ? parsed.data.fiberNodeRpcUrl.trim()
+        : null,
       updatedAt: new Date(),
     })
     .where(eq(creators.id, creator.id));

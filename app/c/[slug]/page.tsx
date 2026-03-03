@@ -10,6 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { WalletConnect } from "@/components/wallet-connect";
+import { SupportButton } from "@/components/creator-hub/support-button";
 
 export default async function CreatorHubPage({
   params,
@@ -35,6 +37,7 @@ export default async function CreatorHubPage({
         <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-foreground">
           Backr
         </Link>
+        <WalletConnect />
       </header>
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-8">
         <div className="flex flex-col items-center text-center mb-10">
@@ -69,13 +72,18 @@ export default async function CreatorHubPage({
             tiersAndPerks.map((tier) => (
               <Card key={tier.id}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">{tier.name}</CardTitle>
-                  {tier.description && (
-                    <CardDescription>{tier.description}</CardDescription>
-                  )}
-                  <p className="text-sm font-medium mt-1">
-                    {tier.priceAmount} {tier.priceCurrency} / {tier.billingInterval}
-                  </p>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <CardTitle className="text-base">{tier.name}</CardTitle>
+                      {tier.description && (
+                        <CardDescription>{tier.description}</CardDescription>
+                      )}
+                      <p className="text-sm font-medium mt-1">
+                        {tier.priceAmount} {tier.priceCurrency} / {tier.billingInterval}
+                      </p>
+                    </div>
+                    <SupportButton tier={tier} creator={creatorData} />
+                  </div>
                 </CardHeader>
                 {tier.perks.length > 0 && (
                   <CardContent className="pt-0">

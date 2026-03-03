@@ -9,6 +9,7 @@ import { relations } from "drizzle-orm";
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   ckbAddress: text("ckb_address").notNull().unique(),
+  fiberNodeRpcUrl: text("fiber_node_rpc_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -23,6 +24,7 @@ export const creators = pgTable("creators", {
   displayName: text("display_name").notNull(),
   bio: text("bio"),
   avatarUrl: text("avatar_url"),
+  fiberNodeRpcUrl: text("fiber_node_rpc_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -52,6 +54,22 @@ export const perks = pgTable("perks", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const posts = pgTable("posts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  creatorId: uuid("creator_id")
+    .notNull()
+    .references(() => creators.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  minTierId: uuid("min_tier_id")
+    .notNull()
+    .references(() => tiers.id, { onDelete: "cascade" }),
+  ckbfsOutpoint: text("ckbfs_outpoint"),
+  publishedAt: timestamp("published_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const patronage = pgTable("patronage", {
   id: uuid("id").primaryKey().defaultRandom(),
   patronUserId: uuid("patron_user_id")
@@ -65,10 +83,10 @@ export const patronage = pgTable("patronage", {
     .references(() => tiers.id, { onDelete: "cascade" }),
   amount: text("amount").notNull(),
   currency: text("currency").notNull().default("CKB"),
+  platformFeeAmount: text("platform_fee_amount"),
   status: text("status").notNull().default("active"),
   nextDueAt: timestamp("next_due_at"),
   lastPaymentAt: timestamp("last_payment_at"),
-  ckbTxHash: text("ckb_tx_hash"),
   fiberTxRef: text("fiber_tx_ref"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -82,6 +100,18 @@ export const creatorsRelations = relations(creators, ({ one, many }) => ({
   user: one(users, { fields: [creators.userId], references: [users.id] }),
   tiers: many(tiers),
   patronage: many(patronage),
+  posts: many(posts),
+}));
+
+export const postsRelations = relations(posts, ({ one }) => ({
+  creator: one(creators, {
+    fields: [posts.creatorId],
+    references: [creators.id],
+  }),
+  minTier: one(tiers, {
+    fields: [posts.minTierId],
+    references: [tiers.id],
+  }),
 }));
 
 export const patronageRelations = relations(patronage, ({ one }) => ({
@@ -103,6 +133,7 @@ export const tiersRelations = relations(tiers, ({ one, many }) => ({
   creator: one(creators, { fields: [tiers.creatorId], references: [creators.id] }),
   perks: many(perks),
   patronage: many(patronage),
+  posts: many(posts),
 }));
 
 export const perksRelations = relations(perks, ({ one }) => ({
@@ -117,5 +148,7 @@ export type Tier = typeof tiers.$inferSelect;
 export type NewTier = typeof tiers.$inferInsert;
 export type Perk = typeof perks.$inferSelect;
 export type NewPerk = typeof perks.$inferInsert;
+export type Post = typeof posts.$inferSelect;
+export type NewPost = typeof posts.$inferInsert;
 export type Patronage = typeof patronage.$inferSelect;
 export type NewPatronage = typeof patronage.$inferInsert;

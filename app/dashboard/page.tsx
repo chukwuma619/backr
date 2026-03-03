@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ProfileForm } from "@/components/dashboard/profile-form";
 import { DashboardTiersSection } from "@/components/dashboard/dashboard-tiers-section";
 import { EarningsSection } from "@/components/dashboard/earnings-section";
+import { DashboardPostsSection } from "@/components/dashboard/dashboard-posts-section";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -43,9 +44,20 @@ export default async function DashboardPage() {
         >
           Backr
         </Link>
-        <Link href="/dashboard" className="text-sm font-medium">
-          Dashboard
-        </Link>
+        <div className="flex gap-4">
+          <Link href="/feed" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+            Feed
+          </Link>
+          <Link href="/supports" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+            My supports
+          </Link>
+          <Link href="/discover" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+            Discover
+          </Link>
+          <Link href="/dashboard" className="text-sm font-medium">
+            Dashboard
+          </Link>
+        </div>
       </header>
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-8">
         <div className="space-y-8">
@@ -62,12 +74,10 @@ export default async function DashboardPage() {
 
           <EarningsSection creatorId={data.id} />
 
-          {/* <Card>
-            <CardHeader>
-              <CardTitle>Posts</CardTitle>
-              <CardDescription>Coming in Stage 4</CardDescription>
-            </CardHeader>
-          </Card> */}
+          <DashboardPostsSection
+            creatorId={data.id}
+            tiers={tiersAndPerks}
+          />
         </div>
       </main>
     </div>
