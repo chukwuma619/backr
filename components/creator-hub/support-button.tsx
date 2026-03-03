@@ -53,7 +53,10 @@ export function SupportButton({ tier, creator }: SupportButtonProps) {
         throw new Error(data.error ?? "Failed to create invoice");
       }
 
-      const { invoiceAddress } = await invoiceRes.json();
+      const invoiceData = await invoiceRes.json();
+      const creatorInvoiceAddress =
+        invoiceData.creatorInvoiceAddress ?? invoiceData.invoiceAddress;
+      const platformInvoiceAddress = invoiceData.platformInvoiceAddress ?? null;
 
       const payRes = await fetch("/api/fiber/pay", {
         method: "POST",
@@ -61,7 +64,8 @@ export function SupportButton({ tier, creator }: SupportButtonProps) {
         body: JSON.stringify({
           creatorId: creator.id,
           tierId: tier.id,
-          invoiceAddress,
+          creatorInvoiceAddress,
+          platformInvoiceAddress,
         }),
       });
 

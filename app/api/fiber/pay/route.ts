@@ -18,7 +18,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { creatorId?: unknown; tierId?: unknown; invoiceAddress?: unknown };
+  let body: {
+    creatorId?: unknown;
+    tierId?: unknown;
+    creatorInvoiceAddress?: unknown;
+    platformInvoiceAddress?: unknown;
+  };
   try {
     body = await request.json();
   } catch {
@@ -27,11 +32,18 @@ export async function POST(request: NextRequest) {
 
   const creatorId = typeof body.creatorId === "string" ? body.creatorId.trim() : null;
   const tierId = typeof body.tierId === "string" ? body.tierId.trim() : null;
-  const invoiceAddress = typeof body.invoiceAddress === "string" ? body.invoiceAddress.trim() : null;
+  const creatorInvoiceAddress =
+    typeof body.creatorInvoiceAddress === "string"
+      ? body.creatorInvoiceAddress.trim()
+      : null;
+  const platformInvoiceAddress =
+    typeof body.platformInvoiceAddress === "string"
+      ? body.platformInvoiceAddress.trim()
+      : null;
 
-  if (!creatorId || !tierId || !invoiceAddress) {
+  if (!creatorId || !tierId || !creatorInvoiceAddress) {
     return NextResponse.json(
-      { error: "Missing creatorId, tierId, or invoiceAddress" },
+      { error: "Missing creatorId, tierId, or creatorInvoiceAddress" },
       { status: 400 }
     );
   }
@@ -67,19 +79,47 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const paymentResult = await sendPayment(patronNodeUrl, { invoice: invoiceAddress });
+    const creatorPaymentResult = await sendPayment(patronNodeUrl, {
+      invoice: creatorInvoiceAddress,
+    });
     const fiberTxRef =
-      typeof paymentResult.payment_hash === "string"
-        ? paymentResult.payment_hash
-        : JSON.stringify(paymentResult.payment_hash);
+      typeof creatorPaymentResult.payment_hash === "string"
+        ? creatorPaymentResult.payment_hash
+        : JSON.stringify(creatorPaymentResult.payment_hash);
 
-    if (paymentResult.status !== "Succeeded" && paymentResult.status !== "succeeded") {
+    if (
+      creatorPaymentResult.status !== "Succeeded" &&
+      creatorPaymentResult.status !== "succeeded"
+    ) {
       return NextResponse.json(
         {
-          error: `Payment failed: ${paymentResult.status}`,
+          error: `Creator payment failed: ${creatorPaymentResult.status}`,
         },
         { status: 400 }
       );
+    }
+
+    let platformFeeFiberTxRef: string | null = null;
+    if (platformInvoiceAddress) {
+      const platformPaymentResult = await sendPayment(patronNodeUrl, {
+        invoice: platformInvoiceAddress,
+      });
+      platformFeeFiberTxRef =
+        typeof platformPaymentResult.payment_hash === "string"
+          ? platformPaymentResult.payment_hash
+          : JSON.stringify(platformPaymentResult.payment_hash);
+
+      if (
+        platformPaymentResult.status !== "Succeeded" &&
+        platformPaymentResult.status !== "succeeded"
+      ) {
+        return NextResponse.json(
+          {
+            error: `Platform fee payment failed: ${platformPaymentResult.status}`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const { data, error } = await createPatronage({
@@ -90,6 +130,7 @@ export async function POST(request: NextRequest) {
       currency: tier.priceCurrency,
       billingInterval: tier.billingInterval,
       fiberTxRef,
+      platformFeeFiberTxRef,
     });
 
     if (error) {

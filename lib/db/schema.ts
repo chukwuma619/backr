@@ -84,6 +84,7 @@ export const patronage = pgTable("patronage", {
   amount: text("amount").notNull(),
   currency: text("currency").notNull().default("CKB"),
   platformFeeAmount: text("platform_fee_amount"),
+  platformFeeFiberTxRef: text("platform_fee_fiber_tx_ref"),
   status: text("status").notNull().default("active"),
   nextDueAt: timestamp("next_due_at"),
   lastPaymentAt: timestamp("last_payment_at"),

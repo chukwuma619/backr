@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { getPatronagesByUserId } from "@/lib/db/queries";
+import { getPatronagesByUserId, getTiersByCreatorId } from "@/lib/db/queries";
 import {
   Card,
   CardContent,
@@ -12,12 +12,23 @@ import {
 } from "@/components/ui/card";
 import { format } from "date-fns";
 import { CancelPatronageButton } from "@/components/supports/cancel-patronage-button";
+import { ChangeTierForm } from "@/components/supports/change-tier-form";
 
 export default async function SupportsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/");
 
   const { data: patronages, error } = await getPatronagesByUserId(user.id);
+
+  const activePatronages = patronages?.filter((p) => p.patronage.status === "active") ?? [];
+  const creatorIds = [...new Set(activePatronages.map((p) => p.creatorId))];
+  const tiersByCreator = await Promise.all(
+    creatorIds.map(async (cid) => {
+      const { data } = await getTiersByCreatorId(cid);
+      return [cid, data ?? []] as const;
+    })
+  );
+  const tiersByCreatorMap = Object.fromEntries(tiersByCreator);
 
   if (error) {
     return (
@@ -34,7 +45,6 @@ export default async function SupportsPage() {
     );
   }
 
-  const activePatronages = patronages?.filter((p) => p.patronage.status === "active") ?? [];
   const cancelledPatronages = patronages?.filter((p) => p.patronage.status === "cancelled") ?? [];
 
   return (
@@ -64,7 +74,7 @@ export default async function SupportsPage() {
         {activePatronages.length > 0 && (
           <div className="space-y-4 mb-8">
             <h2 className="text-lg font-medium">Active</h2>
-            {activePatronages.map(({ patronage: p, creatorDisplayName, creatorSlug, creatorAvatarUrl, tierName, tierPrice, tierCurrency }) => (
+            {activePatronages.map(({ patronage: p, creatorId, creatorDisplayName, creatorSlug, creatorAvatarUrl, tierName, tierPrice, tierCurrency }) => (
               <Card key={p.id}>
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-4">
@@ -99,6 +109,12 @@ export default async function SupportsPage() {
                       <> · Next due: {format(new Date(p.nextDueAt), "MMM d, yyyy")}</>
                     )}
                   </p>
+                  <ChangeTierForm
+                    patronageId={p.id}
+                    currentTierId={p.tierId}
+                    currentTierName={tierName}
+                    tiers={tiersByCreatorMap[creatorId] ?? []}
+                  />
                   <Link
                     href={`/c/${creatorSlug}`}
                     className="text-sm text-primary mt-2 inline-block"

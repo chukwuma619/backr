@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDuePatronagesForRenewal } from "@/lib/db/queries";
+import {
+  getDuePatronagesForRenewal,
+  updatePatronageAfterRenewal,
+} from "@/lib/db/queries";
+import { newInvoice, sendPayment } from "@/lib/fiber/fiber-rpc";
+import {
+  calculatePlatformFee,
+  calculateCreatorAmount,
+  getPlatformFeePercent,
+} from "@/lib/platform-fee";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+
+function getPatronFiberNodeUrl(userFiberNodeRpcUrl: string | null): string | null {
+  if (userFiberNodeRpcUrl) return userFiberNodeRpcUrl;
+  const envUrl = process.env.FIBER_PATRON_RPC_URL;
+  return envUrl && envUrl.trim() ? envUrl.trim() : null;
+}
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -21,16 +36,143 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const results: {
+    id: string;
+    status: "processed" | "skipped" | "failed";
+    reason?: string;
+  }[] = [];
+
+  const hasPlatformFee =
+    getPlatformFeePercent() > 0 &&
+    process.env.PLATFORM_FIBER_RPC_URL?.trim();
+
+  for (const row of duePatronages ?? []) {
+    const { patronage, creatorFiberNodeRpcUrl, patronFiberNodeRpcUrl, tierPrice, tierBillingInterval } = row;
+
+    if (!creatorFiberNodeRpcUrl) {
+      results.push({
+        id: patronage.id,
+        status: "skipped",
+        reason: "Creator has no Fiber node configured",
+      });
+      continue;
+    }
+
+    const patronNodeUrl = getPatronFiberNodeUrl(patronFiberNodeRpcUrl);
+    if (!patronNodeUrl) {
+      results.push({
+        id: patronage.id,
+        status: "skipped",
+        reason: "Patron has no Fiber node configured (set FIBER_PATRON_RPC_URL for shared node)",
+      });
+      continue;
+    }
+
+    try {
+      const platformFeeAmount = calculatePlatformFee(tierPrice);
+      const creatorAmount = calculateCreatorAmount(tierPrice);
+      const shouldCollectPlatformFee =
+        hasPlatformFee && parseFloat(platformFeeAmount) > 0;
+
+      const creatorInvoiceResult = await newInvoice(creatorFiberNodeRpcUrl, {
+        amountCkb: creatorAmount,
+        currency: "CKB",
+        description: `Renewal - ${row.creatorDisplayName} - ${row.tierName}`,
+        expiry: 3600,
+      });
+
+      const creatorPaymentResult = await sendPayment(patronNodeUrl, {
+        invoice: creatorInvoiceResult.invoice_address,
+      });
+
+      const fiberTxRef =
+        typeof creatorPaymentResult.payment_hash === "string"
+          ? creatorPaymentResult.payment_hash
+          : JSON.stringify(creatorPaymentResult.payment_hash);
+
+      if (
+        creatorPaymentResult.status !== "Succeeded" &&
+        creatorPaymentResult.status !== "succeeded"
+      ) {
+        results.push({
+          id: patronage.id,
+          status: "failed",
+          reason: `Creator payment: ${creatorPaymentResult.status}`,
+        });
+        continue;
+      }
+
+      let platformFeeFiberTxRef: string | null = null;
+      if (shouldCollectPlatformFee) {
+        const platformInvoiceResult = await newInvoice(
+          process.env.PLATFORM_FIBER_RPC_URL!.trim(),
+          {
+            amountCkb: platformFeeAmount,
+            currency: "CKB",
+            description: `Platform fee - ${row.creatorDisplayName}`,
+            expiry: 3600,
+          }
+        );
+
+        const platformPaymentResult = await sendPayment(patronNodeUrl, {
+          invoice: platformInvoiceResult.invoice_address,
+        });
+
+        platformFeeFiberTxRef =
+          typeof platformPaymentResult.payment_hash === "string"
+            ? platformPaymentResult.payment_hash
+            : JSON.stringify(platformPaymentResult.payment_hash);
+
+        if (
+          platformPaymentResult.status !== "Succeeded" &&
+          platformPaymentResult.status !== "succeeded"
+        ) {
+          results.push({
+            id: patronage.id,
+            status: "failed",
+            reason: `Platform fee payment: ${platformPaymentResult.status}`,
+          });
+          continue;
+        }
+      }
+
+      const { error: updateError } = await updatePatronageAfterRenewal(
+        patronage.id,
+        fiberTxRef,
+        tierBillingInterval ?? "monthly",
+        platformFeeFiberTxRef
+      );
+
+      if (updateError) {
+        console.error("Failed to update patronage after renewal:", patronage.id, updateError);
+        results.push({
+          id: patronage.id,
+          status: "failed",
+          reason: "Failed to update patronage record",
+        });
+        continue;
+      }
+
+      results.push({ id: patronage.id, status: "processed" });
+    } catch (err) {
+      console.error("Renewal failed for patronage", patronage.id, err);
+      results.push({
+        id: patronage.id,
+        status: "failed",
+        reason: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
+  }
+
+  const processed = results.filter((r) => r.status === "processed").length;
+  const skipped = results.filter((r) => r.status === "skipped").length;
+  const failed = results.filter((r) => r.status === "failed").length;
+
   return NextResponse.json({
     dueCount: duePatronages?.length ?? 0,
-    patronages: duePatronages?.map((p) => ({
-      id: p.patronage.id,
-      patronUserId: p.patronage.patronUserId,
-      creatorId: p.patronage.creatorId,
-      tierId: p.patronage.tierId,
-      amount: p.patronage.amount,
-      nextDueAt: p.patronage.nextDueAt,
-      creatorSlug: p.creatorSlug,
-    })),
+    processed,
+    skipped,
+    failed,
+    results,
   });
 }

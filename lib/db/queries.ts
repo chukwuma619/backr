@@ -67,6 +67,20 @@ export async function getCreatorByUserId(userId: string) {
   }
 }
 
+export async function getTiersByCreatorId(creatorId: string) {
+  try {
+    const rows = await db
+      .select({ id: tiers.id, name: tiers.name, priceAmount: tiers.priceAmount, priceCurrency: tiers.priceCurrency })
+      .from(tiers)
+      .where(eq(tiers.creatorId, creatorId))
+      .orderBy(tiers.createdAt);
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
 export async function getTiersAndPerksByCreatorId(creatorId: string) {
   try {
     const rows = await db
@@ -106,6 +120,7 @@ export async function createPatronage(data: {
   currency?: string;
   billingInterval?: string;
   fiberTxRef?: string;
+  platformFeeFiberTxRef?: string | null;
 }) {
   try {
     const platformFeeAmount = calculatePlatformFee(data.amount);
@@ -118,6 +133,7 @@ export async function createPatronage(data: {
         amount: data.amount,
         currency: data.currency ?? "CKB",
         platformFeeAmount: platformFeeAmount !== "0" ? platformFeeAmount : null,
+        platformFeeFiberTxRef: data.platformFeeFiberTxRef ?? null,
         status: "active",
         lastPaymentAt: new Date(),
         nextDueAt: getNextDueDate(data.billingInterval ?? "monthly"),
@@ -141,6 +157,32 @@ function getNextDueDate(interval: string): Date {
     d.setMonth(d.getMonth() + 1);
   }
   return d;
+}
+
+export async function updatePatronageAfterRenewal(
+  patronageId: string,
+  fiberTxRef: string,
+  billingInterval: string,
+  platformFeeFiberTxRef?: string | null
+) {
+  try {
+    const nextDue = getNextDueDate(billingInterval);
+    const [row] = await db
+      .update(patronage)
+      .set({
+        lastPaymentAt: new Date(),
+        nextDueAt: nextDue,
+        fiberTxRef,
+        platformFeeFiberTxRef: platformFeeFiberTxRef ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(patronage.id, patronageId))
+      .returning();
+    return { data: row, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
 }
 
 export async function getEarningsOverTimeByCreatorId(creatorId: string) {
@@ -344,10 +386,14 @@ export async function getDuePatronagesForRenewal() {
       .select({
         patronage: patronage,
         patronAddress: users.ckbAddress,
+        patronFiberNodeRpcUrl: users.fiberNodeRpcUrl,
         creatorDisplayName: creators.displayName,
         creatorSlug: creators.slug,
+        creatorFiberNodeRpcUrl: creators.fiberNodeRpcUrl,
         tierName: tiers.name,
         tierPrice: tiers.priceAmount,
+        tierBillingInterval: tiers.billingInterval,
+        tierPriceCurrency: tiers.priceCurrency,
       })
       .from(patronage)
       .innerJoin(users, eq(patronage.patronUserId, users.id))
@@ -373,6 +419,7 @@ export async function getPatronagesByUserId(patronUserId: string) {
     const rows = await db
       .select({
         patronage: patronage,
+        creatorId: creators.id,
         creatorDisplayName: creators.displayName,
         creatorSlug: creators.slug,
         creatorAvatarUrl: creators.avatarUrl,

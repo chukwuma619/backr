@@ -3,6 +3,11 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { creators, tiers } from "@/lib/db/schema";
 import { newInvoice } from "@/lib/fiber/fiber-rpc";
+import {
+  calculatePlatformFee,
+  calculateCreatorAmount,
+  getPlatformFeePercent,
+} from "@/lib/platform-fee";
 
 export async function POST(request: NextRequest) {
   let body: { creatorId?: unknown; tierId?: unknown };
@@ -48,16 +53,40 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const platformFeeAmount = calculatePlatformFee(tier.priceAmount);
+  const creatorAmount = calculateCreatorAmount(tier.priceAmount);
+  const hasPlatformFee =
+    getPlatformFeePercent() > 0 &&
+    parseFloat(platformFeeAmount) > 0 &&
+    process.env.PLATFORM_FIBER_RPC_URL?.trim();
+
   try {
-    const result = await newInvoice(creator.fiberNodeRpcUrl, {
-      amountCkb: tier.priceAmount,
+    const creatorResult = await newInvoice(creator.fiberNodeRpcUrl, {
+      amountCkb: creatorAmount,
       currency: "CKB",
       description: `${tier.name} - ${creator.displayName}`,
       expiry: 3600,
     });
 
+    if (!hasPlatformFee) {
+      return NextResponse.json({
+        creatorInvoiceAddress: creatorResult.invoice_address,
+      });
+    }
+
+    const platformResult = await newInvoice(
+      process.env.PLATFORM_FIBER_RPC_URL!.trim(),
+      {
+        amountCkb: platformFeeAmount,
+        currency: "CKB",
+        description: `Platform fee - ${creator.displayName}`,
+        expiry: 3600,
+      }
+    );
+
     return NextResponse.json({
-      invoiceAddress: result.invoice_address,
+      creatorInvoiceAddress: creatorResult.invoice_address,
+      platformInvoiceAddress: platformResult.invoice_address,
     });
   } catch (err) {
     console.error("Fiber new_invoice error:", err);
