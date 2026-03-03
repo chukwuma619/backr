@@ -7,6 +7,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useSigner } from "@ckb-ccc/connector-react";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Form,
   FormControl,
   FormField,
@@ -17,37 +23,29 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { createPost, updatePostCkbfsOutpoint } from "@/app/actions/post";
+import { updatePost, updatePostCkbfsOutpoint } from "@/app/actions/post";
 import {
   buildAndSendPublishTx,
+  buildAndSendUpdateTx,
   outpointFromTxHash,
 } from "@/lib/ckbfs/build-publish-tx";
 import { useAuth } from "@/lib/auth/auth-context";
-import type { Tier } from "@/lib/db/schema";
+import type { Post } from "@/lib/db/schema";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   body: z.string().min(1, "Body is required").max(50000),
-  minTierId: z.string().uuid("Select a tier"),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-export function PostForm({ tiers }: { tiers: Tier[] }) {
+type EditPostDialogProps = {
+  post: Post;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+export function EditPostDialog({ post, open, onOpenChange }: EditPostDialogProps) {
   const router = useRouter();
   const { user } = useAuth();
   const signer = useSigner();
@@ -60,28 +58,26 @@ export function PostForm({ tiers }: { tiers: Tier[] }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      title: "",
-      body: "",
-      minTierId: tiers[0]?.id ?? "",
+      title: post.title,
+      body: post.body,
     },
   });
 
-  async function onSubmit(values: FormValues) {
+  async function onSave(values: FormValues) {
     setError(null);
-    setCkbfsStatus("idle");
     setCkbfsError(null);
+    setCkbfsStatus("idle");
 
-    if (!signer || !user?.ckbAddress) {
-      setError("Connect your wallet to publish posts to CKB.");
+    if (!user?.ckbAddress || !signer) {
+      setError("Connect your wallet to save posts to CKB.");
       return;
     }
 
     const formData = new FormData();
     formData.set("title", values.title.trim());
     formData.set("body", values.body.trim());
-    formData.set("minTierId", values.minTierId);
 
-    const result = await createPost({} as never, formData);
+    const result = await updatePost(post.id, formData);
 
     if (result?.message) {
       setError(result.message);
@@ -96,24 +92,29 @@ export function PostForm({ tiers }: { tiers: Tier[] }) {
       return;
     }
 
-    if (!result?.postId) {
-      setError("Post created but no ID returned.");
-      return;
-    }
-
     setCkbfsStatus("pending");
-    form.reset({ title: "", body: "", minTierId: tiers[0]?.id ?? "" });
 
     try {
-      const txHash = await buildAndSendPublishTx(signer, {
-        postId: result.postId,
-        title: values.title.trim(),
-        body: values.body.trim(),
-        creatorAddress: user.ckbAddress,
-      });
+      let txHash: string;
+      if (post.ckbfsOutpoint) {
+        txHash = await buildAndSendUpdateTx(signer, {
+          postId: post.id,
+          title: values.title,
+          body: values.body,
+          creatorAddress: user.ckbAddress,
+          oldOutpoint: post.ckbfsOutpoint,
+        });
+      } else {
+        txHash = await buildAndSendPublishTx(signer, {
+          postId: post.id,
+          title: values.title,
+          body: values.body,
+          creatorAddress: user.ckbAddress,
+        });
+      }
 
       const outpoint = outpointFromTxHash(txHash);
-      const updateResult = await updatePostCkbfsOutpoint(result.postId, outpoint);
+      const updateResult = await updatePostCkbfsOutpoint(post.id, outpoint);
 
       if (updateResult?.message) {
         throw new Error(updateResult.message);
@@ -124,35 +125,30 @@ export function PostForm({ tiers }: { tiers: Tier[] }) {
     } catch (err) {
       setCkbfsStatus("error");
       setCkbfsError(
-        err instanceof Error ? err.message : "Failed to publish to CKB"
+        err instanceof Error ? err.message : "Failed to update on CKB"
       );
     }
   }
 
-  if (tiers.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Posts</CardTitle>
-          <CardDescription>
-            Create at least one tier before publishing posts.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
+  function handleOpenChange(next: boolean) {
+    if (!next) {
+      setCkbfsStatus("idle");
+      setCkbfsError(null);
+    }
+    onOpenChange(next);
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Publish post</CardTitle>
-        <CardDescription>
-          Create exclusive content for your patrons. Set the minimum tier required to view.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit post</DialogTitle>
+        </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(onSave)}
+            className="space-y-4"
+          >
             {error && <p className="text-sm text-destructive">{error}</p>}
             <FormField
               control={form.control}
@@ -175,39 +171,11 @@ export function PostForm({ tiers }: { tiers: Tier[] }) {
                   <FormLabel>Content</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Write your exclusive content..."
+                      placeholder="Content..."
                       className="min-h-[120px]"
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="minTierId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Minimum tier</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select tier" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {tiers.map((tier) => (
-                        <SelectItem key={tier.id} value={tier.id}>
-                          {tier.name} ({tier.priceAmount} {tier.priceCurrency})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -224,17 +192,17 @@ export function PostForm({ tiers }: { tiers: Tier[] }) {
               {form.formState.isSubmitting
                 ? "Saving…"
                 : ckbfsStatus === "pending"
-                  ? "Publishing to CKB…"
+                  ? "Updating on CKB…"
                   : ckbfsStatus === "success"
-                    ? "Published"
-                    : "Publish"}
+                    ? "Saved"
+                    : "Save"}
             </Button>
             {ckbfsError && (
               <p className="text-sm text-destructive">{ckbfsError}</p>
             )}
           </form>
         </Form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
