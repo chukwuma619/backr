@@ -74,10 +74,7 @@ export default async function DashboardPage() {
 
           <EarningsSection creatorId={data.id} />
 
-          <DashboardPostsSection
-            creatorId={data.id}
-            tiers={tiersAndPerks}
-          />
+          <DashboardPostsSection creator={data} tiers={tiersAndPerks} />
         </div>
       </main>
     </div>

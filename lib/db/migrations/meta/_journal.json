@@ -43,6 +43,13 @@
       "when": 1772504341587,
       "tag": "0005_fixed_shriek",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772905251549,
+      "tag": "0006_soft_freak",
+      "breakpoints": true
     }
   ]
 }

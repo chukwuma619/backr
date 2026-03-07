@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useSigner } from "@ckb-ccc/connector-react";
 import {
   Form,
   FormControl,
@@ -31,13 +30,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { createPost, updatePostCkbfsOutpoint } from "@/app/actions/post";
-import {
-  buildAndSendPublishTx,
-  outpointFromTxHash,
-} from "@/lib/ckbfs/build-publish-tx";
-import { useAuth } from "@/lib/auth/auth-context";
+import { createPost, updatePostNostrEventId } from "@/app/actions/post";
+import { publishPostToNostr } from "@/lib/nostr/publish-post";
 import type { Tier } from "@/lib/db/schema";
+import type { Creator } from "@/lib/db/schema";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required").max(200),
@@ -47,15 +43,19 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-export function PostForm({ tiers }: { tiers: Tier[] }) {
+export function PostForm({
+  tiers,
+  creator,
+}: {
+  tiers: Tier[];
+  creator: Creator;
+}) {
   const router = useRouter();
-  const { user } = useAuth();
-  const signer = useSigner();
   const [error, setError] = useState<string | null>(null);
-  const [ckbfsStatus, setCkbfsStatus] = useState<
+  const [nostrStatus, setNostrStatus] = useState<
     "idle" | "pending" | "success" | "error"
   >("idle");
-  const [ckbfsError, setCkbfsError] = useState<string | null>(null);
+  const [nostrError, setNostrError] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -68,11 +68,11 @@ export function PostForm({ tiers }: { tiers: Tier[] }) {
 
   async function onSubmit(values: FormValues) {
     setError(null);
-    setCkbfsStatus("idle");
-    setCkbfsError(null);
+    setNostrStatus("idle");
+    setNostrError(null);
 
-    if (!signer || !user?.ckbAddress) {
-      setError("Connect your wallet to publish posts to CKB.");
+    if (!creator.nostrPubkey) {
+      setError("Connect Nostr in your profile to publish posts.");
       return;
     }
 
@@ -101,30 +101,28 @@ export function PostForm({ tiers }: { tiers: Tier[] }) {
       return;
     }
 
-    setCkbfsStatus("pending");
+    setNostrStatus("pending");
     form.reset({ title: "", body: "", minTierId: tiers[0]?.id ?? "" });
 
     try {
-      const txHash = await buildAndSendPublishTx(signer, {
+      const eventId = await publishPostToNostr({
         postId: result.postId,
         title: values.title.trim(),
         body: values.body.trim(),
-        creatorAddress: user.ckbAddress,
       });
 
-      const outpoint = outpointFromTxHash(txHash);
-      const updateResult = await updatePostCkbfsOutpoint(result.postId, outpoint);
+      const updateResult = await updatePostNostrEventId(result.postId, eventId);
 
       if (updateResult?.message) {
         throw new Error(updateResult.message);
       }
 
-      setCkbfsStatus("success");
+      setNostrStatus("success");
       router.refresh();
     } catch (err) {
-      setCkbfsStatus("error");
-      setCkbfsError(
-        err instanceof Error ? err.message : "Failed to publish to CKB"
+      setNostrStatus("error");
+      setNostrError(
+        err instanceof Error ? err.message : "Failed to publish to Nostr"
       );
     }
   }
@@ -147,7 +145,8 @@ export function PostForm({ tiers }: { tiers: Tier[] }) {
       <CardHeader>
         <CardTitle>Publish post</CardTitle>
         <CardDescription>
-          Create exclusive content for your patrons. Set the minimum tier required to view.
+          Create exclusive content for your patrons. Set the minimum tier
+          required to view. Posts are published to Nostr.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -216,21 +215,20 @@ export function PostForm({ tiers }: { tiers: Tier[] }) {
               type="submit"
               disabled={
                 form.formState.isSubmitting ||
-                ckbfsStatus === "pending" ||
-                !signer ||
-                !user?.ckbAddress
+                nostrStatus === "pending" ||
+                !creator.nostrPubkey
               }
             >
               {form.formState.isSubmitting
                 ? "Saving…"
-                : ckbfsStatus === "pending"
-                  ? "Publishing to CKB…"
-                  : ckbfsStatus === "success"
+                : nostrStatus === "pending"
+                  ? "Publishing to Nostr…"
+                  : nostrStatus === "success"
                     ? "Published"
                     : "Publish"}
             </Button>
-            {ckbfsError && (
-              <p className="text-sm text-destructive">{ckbfsError}</p>
+            {nostrError && (
+              <p className="text-sm text-destructive">{nostrError}</p>
             )}
           </form>
         </Form>

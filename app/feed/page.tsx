@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { format } from "date-fns";
+import { NostrShareLinks } from "@/components/nostr-share-links";
 
 export default async function FeedPage() {
   const user = await getCurrentUser();
@@ -63,8 +64,11 @@ export default async function FeedPage() {
         {feedItems && feedItems.length > 0 ? (
           <div className="space-y-4">
             {feedItems.map(({ post, creatorDisplayName, minTierName }) => (
-              <Link key={post.id} href={`/feed/${post.id}`}>
-              <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+              <Card
+                key={post.id}
+                className="hover:bg-muted/50 transition-colors"
+              >
+                <Link href={`/feed/${post.id}`} className="block">
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -83,8 +87,13 @@ export default async function FeedPage() {
                       {format(new Date(post.publishedAt), "MMM d, yyyy")}
                     </p>
                   </CardContent>
+                </Link>
+                {post.nostrEventId && (
+                  <div className="px-6 pb-4">
+                    <NostrShareLinks eventId={post.nostrEventId} />
+                  </div>
+                )}
               </Card>
-              </Link>
             ))}
           </div>
         ) : (

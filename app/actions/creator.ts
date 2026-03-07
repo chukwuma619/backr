@@ -167,3 +167,26 @@ export async function updateCreator(
   revalidatePath("/dashboard");
   return { success: true };
 }
+
+export async function updateCreatorNostrPubkey(
+  nostrPubkey: string
+): Promise<{ success?: boolean; message?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { message: "Unauthorized" };
+
+  const { data: creator } = await getCreatorByUserId(user.id);
+  if (!creator) return { message: "Creator profile not found" };
+
+  const hex = nostrPubkey.trim();
+  if (!/^[a-fA-F0-9]{64}$/.test(hex)) {
+    return { message: "Invalid Nostr public key" };
+  }
+
+  await db
+    .update(creators)
+    .set({ nostrPubkey: hex, updatedAt: new Date() })
+    .where(eq(creators.id, creator.id));
+
+  revalidatePath("/dashboard");
+  return { success: true };
+}

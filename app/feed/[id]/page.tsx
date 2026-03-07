@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { getPostById, canPatronAccessPost } from "@/lib/db/queries";
 import { format } from "date-fns";
+import { NostrShareLinks } from "@/components/nostr-share-links";
 
 export default async function PostPage({
   params,
@@ -60,6 +61,14 @@ export default async function PostPage({
           <p className="text-sm text-muted-foreground mt-2">
             {format(new Date(post.publishedAt), "MMM d, yyyy")}
           </p>
+          {post.nostrEventId && (
+            <div className="mt-2">
+              <NostrShareLinks
+                eventId={post.nostrEventId}
+                variant="button"
+              />
+            </div>
+          )}
           <div className="mt-6 prose prose-neutral dark:prose-invert max-w-none">
             <p className="whitespace-pre-wrap">{post.body}</p>
           </div>

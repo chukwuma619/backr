@@ -9,15 +9,16 @@ import { getPostsByCreatorId } from "@/lib/db/queries";
 import { PostForm } from "./post-form";
 import { PostListItem } from "./post-list-item";
 import type { Tier } from "@/lib/db/schema";
+import type { Creator } from "@/lib/db/schema";
 
 export async function DashboardPostsSection({
-  creatorId,
+  creator,
   tiers,
 }: {
-  creatorId: string;
+  creator: Creator;
   tiers: Tier[];
 }) {
-  const { data: posts, error } = await getPostsByCreatorId(creatorId);
+  const { data: posts, error } = await getPostsByCreatorId(creator.id);
 
   if (error) {
     return (
@@ -32,7 +33,7 @@ export async function DashboardPostsSection({
 
   return (
     <div className="space-y-8">
-      <PostForm tiers={tiers} />
+      <PostForm tiers={tiers} creator={creator} />
 
       <Card>
         <CardHeader>
@@ -45,7 +46,7 @@ export async function DashboardPostsSection({
           {posts && posts.length > 0 ? (
             <ul className="space-y-4">
               {posts.map((post) => (
-                <PostListItem key={post.id} post={post} />
+                <PostListItem key={post.id} post={post} creator={creator} />
               ))}
             </ul>
           ) : (

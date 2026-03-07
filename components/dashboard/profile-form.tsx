@@ -23,7 +23,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { updateCreator } from "@/app/actions/creator";
+import { updateCreator, updateCreatorNostrPubkey } from "@/app/actions/creator";
+import { getNostrPublicKey } from "@/lib/nostr/publish-post";
 import type { Creator } from "@/lib/db/schema";
 
 const schema = z.object({
@@ -47,6 +48,10 @@ type FormValues = z.infer<typeof schema>;
 export function ProfileForm({ data }: { data: Creator }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [nostrStatus, setNostrStatus] = useState<
+    "idle" | "pending" | "success" | "error"
+  >("idle");
+  const [nostrError, setNostrError] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -82,6 +87,25 @@ export function ProfileForm({ data }: { data: Creator }) {
       return;
     }
     router.refresh();
+  }
+
+  async function handleConnectNostr() {
+    setNostrError(null);
+    setNostrStatus("pending");
+    try {
+      const pubkey = await getNostrPublicKey();
+      const result = await updateCreatorNostrPubkey(pubkey);
+      if (result?.message) {
+        throw new Error(result.message);
+      }
+      setNostrStatus("success");
+      router.refresh();
+    } catch (err) {
+      setNostrStatus("error");
+      setNostrError(
+        err instanceof Error ? err.message : "Failed to connect Nostr"
+      );
+    }
   }
 
   return (
@@ -163,6 +187,34 @@ export function ProfileForm({ data }: { data: Creator }) {
                 </FormItem>
               )}
             />
+            <div className="flex items-center gap-4">
+              <div>
+                <p className="text-sm font-medium mb-1">Nostr (for publishing posts)</p>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {data.nostrPubkey
+                    ? `Connected: ${data.nostrPubkey.slice(0, 12)}…${data.nostrPubkey.slice(-6)}`
+                    : "Connect a Nostr extension (e.g. nos2x) to publish posts."}
+                </p>
+                <Button
+                  type="button"
+                  variant={data.nostrPubkey ? "outline" : "default"}
+                  size="sm"
+                  onClick={handleConnectNostr}
+                  disabled={nostrStatus === "pending"}
+                >
+                  {nostrStatus === "pending"
+                    ? "Connecting…"
+                    : nostrStatus === "success"
+                      ? "Connected"
+                      : data.nostrPubkey
+                        ? "Reconnect"
+                        : "Connect Nostr"}
+                </Button>
+                {nostrError && (
+                  <p className="text-sm text-destructive mt-2">{nostrError}</p>
+                )}
+              </div>
+            </div>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting ? "Saving…" : "Save"}
             </Button>

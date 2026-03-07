@@ -132,9 +132,9 @@ export async function updatePost(
   return { success: true };
 }
 
-export async function updatePostCkbfsOutpoint(
+export async function updatePostNostrEventId(
   postId: string,
-  ckbfsOutpoint: string
+  nostrEventId: string
 ): Promise<{ success?: boolean; message?: string }> {
   const user = await getCurrentUser();
   if (!user) return { message: "Unauthorized" };
@@ -154,7 +154,7 @@ export async function updatePostCkbfsOutpoint(
 
   await db
     .update(posts)
-    .set({ ckbfsOutpoint, updatedAt: new Date() })
+    .set({ nostrEventId, updatedAt: new Date() })
     .where(eq(posts.id, postId));
 
   revalidatePath("/dashboard");

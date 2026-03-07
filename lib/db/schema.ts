@@ -25,6 +25,7 @@ export const creators = pgTable("creators", {
   bio: text("bio"),
   avatarUrl: text("avatar_url"),
   fiberNodeRpcUrl: text("fiber_node_rpc_url"),
+  nostrPubkey: text("nostr_pubkey"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -64,7 +65,7 @@ export const posts = pgTable("posts", {
   minTierId: uuid("min_tier_id")
     .notNull()
     .references(() => tiers.id, { onDelete: "cascade" }),
-  ckbfsOutpoint: text("ckbfs_outpoint"),
+  nostrEventId: text("nostr_event_id"),
   publishedAt: timestamp("published_at").notNull().defaultNow(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
