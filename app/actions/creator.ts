@@ -94,7 +94,6 @@ export async function createCreator(
   });
 
   revalidatePath("/dashboard");
-  revalidatePath("/onboarding");
   redirect("/dashboard");
 }
 

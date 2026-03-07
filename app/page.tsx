@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <header className="border-b border-border px-4 py-3 flex items-center justify-end gap-2">
-        <Link href="/discover" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+        <Link href="/dashboard/discover" className="text-sm font-medium text-muted-foreground hover:text-foreground">
           Discover
         </Link>
         <FeedLink />

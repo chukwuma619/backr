@@ -26,7 +26,7 @@ export function DiscoverSearch({
       } else {
         params.delete("q");
       }
-      router.push(`/discover?${params.toString()}`);
+      router.push(`/dashboard/discover?${params.toString()}`);
     },
     [value, router, searchParams]
   );
