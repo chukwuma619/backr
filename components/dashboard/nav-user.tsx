@@ -26,6 +26,7 @@ export function NavUser({
 }: {
   user: {
     ckbAddress: string;
+    userType: string;
   };
 }) {
   const { isMobile } = useSidebar();
@@ -58,7 +59,7 @@ export function NavUser({
                   {truncateAddress(user.ckbAddress)}
                 </span>
                 <span className="truncate text-xs text-muted-foreground">
-                  Member
+                 {user.userType}
                 </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
@@ -81,7 +82,7 @@ export function NavUser({
                     {truncateAddress(user.ckbAddress, 4, 4)}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">
-                    Member
+                    {user.userType}
                   </span>
                 </div>
               </div>

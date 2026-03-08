@@ -37,7 +37,7 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar> & {
   user: {
     ckbAddress: string;
-    fiberNodeRpcUrl: string | null;
+    userType: string;
   };
 }) {
   return (
