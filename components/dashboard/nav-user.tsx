@@ -1,14 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronsUpDown,
-LogOut, Settings, User } from "lucide-react";
+LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,

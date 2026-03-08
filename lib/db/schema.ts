@@ -1,15 +1,13 @@
-import {
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-} from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { relations,sql } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   ckbAddress: text("ckb_address").notNull().unique(),
   fiberNodeRpcUrl: text("fiber_node_rpc_url"),
+  nostrPubkey: text("nostr_pubkey"),
+  userType: text("user_type").notNull().default("member"),
+  avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -20,12 +18,9 @@ export const creators = pgTable("creators", {
     .notNull()
     .unique()
     .references(() => users.id, { onDelete: "cascade" }),
-  slug: text("slug").notNull().unique(),
+  username: text("username").notNull().unique(),
   displayName: text("display_name").notNull(),
   bio: text("bio"),
-  avatarUrl: text("avatar_url"),
-  fiberNodeRpcUrl: text("fiber_node_rpc_url"),
-  nostrPubkey: text("nostr_pubkey"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -132,7 +127,10 @@ export const patronageRelations = relations(patronage, ({ one }) => ({
 }));
 
 export const tiersRelations = relations(tiers, ({ one, many }) => ({
-  creator: one(creators, { fields: [tiers.creatorId], references: [creators.id] }),
+  creator: one(creators, {
+    fields: [tiers.creatorId],
+    references: [creators.id],
+  }),
   perks: many(perks),
   patronage: many(patronage),
   posts: many(posts),
