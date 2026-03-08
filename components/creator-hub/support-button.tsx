@@ -27,7 +27,7 @@ export function SupportButton({ tier, creator }: SupportButtonProps) {
   const [error, setError] = useState<string | null>(null);
 
   const isOwnHub = user && creator.userId === user.id;
-  const canSupport = !!creator.fiberNodeRpcUrl && !isOwnHub;
+  const canSupport = !isOwnHub;
 
   async function handleSupport() {
     if (!user) {

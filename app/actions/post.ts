@@ -7,7 +7,11 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { posts } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { getCreatorByUserId, getTiersAndPerksByCreatorId } from "@/lib/db/queries";
+import {
+  getCreatorByUserId,
+  getTiersAndPerksByCreatorId,
+  createNotificationsForNewPost,
+} from "@/lib/db/queries";
 
 const createSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
@@ -71,6 +75,14 @@ export async function createPost(
       minTierId: parsed.data.minTierId,
     })
     .returning({ id: posts.id });
+
+  if (inserted?.id) {
+    await createNotificationsForNewPost(
+      inserted.id,
+      creator.id,
+      parsed.data.minTierId
+    );
+  }
 
   revalidatePath("/dashboard");
   revalidatePath("/feed");

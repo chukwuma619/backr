@@ -48,7 +48,7 @@ export function PostForm({
   creator,
 }: {
   tiers: Tier[];
-  creator: Creator;
+  creator: Creator & { nostrPubkey?: string | null };
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);

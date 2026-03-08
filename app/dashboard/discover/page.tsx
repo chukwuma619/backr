@@ -1,7 +1,18 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Suspense } from "react";
-import { getAllCreatorsForDiscovery } from "@/lib/db/queries";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
+import {
+  getAllCreatorsForDiscovery,
+  getTrendingCreators,
+  getNewCreators,
+  getCreatorsByCategory,
+  getRecommendedCreatorsForUser,
+} from "@/lib/db/queries";
+import { DiscoverSearch } from "@/components/discover/discover-search";
+import { DiscoverTopics } from "@/components/discover/discover-topics";
+import { DiscoverCreatorCarousel } from "@/components/discover/discover-creator-carousel";
+import { DiscoverCreatorCard } from "@/components/discover/discover-creator-card";
+import { DISCOVER_TOPICS } from "@/lib/discover/constants";
 import {
   Card,
   CardContent,
@@ -9,17 +20,42 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { DiscoverSearch } from "@/components/discover/discover-search";
 
 export default async function DashboardDiscoverPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; topic?: string }>;
 }) {
-  const { q } = await searchParams;
-  const { data: creators, error } = await getAllCreatorsForDiscovery(q);
+  const { q, topic } = await searchParams;
+  const user = await getCurrentUser();
 
-  if (error) {
+  const topicLabel = topic
+    ? DISCOVER_TOPICS.find((t) => t.slug === topic)?.label ?? topic
+    : null;
+
+  const isSearchOrTopic = Boolean(q?.trim() || topic?.trim());
+
+  const [
+    searchResult,
+    trendingResult,
+    newResult,
+    categoryResult,
+    recommendedResult,
+  ] = await Promise.all([
+    getAllCreatorsForDiscovery(q, topic ?? undefined),
+    getTrendingCreators(12),
+    getNewCreators(12),
+    topic ? getCreatorsByCategory(topic, 24) : Promise.resolve({ data: [] }),
+    user ? getRecommendedCreatorsForUser(user.id, 12) : Promise.resolve({ data: [] }),
+  ]);
+
+  const searchCreators = searchResult.data ?? [];
+  const trendingCreators = trendingResult.data ?? [];
+  const newCreators = newResult.data ?? [];
+  const categoryCreators = categoryResult.data ?? [];
+  const recommendedCreators = recommendedResult.data ?? [];
+
+  if (searchResult.error) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <p className="text-destructive">Error loading creators.</p>
@@ -28,72 +64,86 @@ export default async function DashboardDiscoverPage({
   }
 
   return (
-    <div className="max-w-4xl mx-auto w-full px-4 py-8">
-      <h1 className="text-2xl font-semibold tracking-tight mb-2">
-        Discover creators
-      </h1>
-      <p className="text-muted-foreground mb-6">
-        Explore and support creators on Backr.
-      </p>
+    <div className="max-w-4xl mx-auto w-full px-4 py-8 space-y-10">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight mb-2">
+          Discover creators
+        </h1>
+        <p className="text-muted-foreground mb-6">
+          Explore and support creators on Backr. Find creators by topic, browse
+          trending and new arrivals, or search by name.
+        </p>
 
-      <Suspense
-        fallback={
-          <div className="h-10 mb-8 bg-muted rounded-md animate-pulse" />
-        }
-      >
-        <DiscoverSearch defaultValue={q} className="mb-8" />
-      </Suspense>
+        <Suspense
+          fallback={
+            <div className="h-10 mb-6 bg-muted rounded-md animate-pulse" />
+          }
+        >
+          <DiscoverSearch defaultValue={q} className="mb-6" />
+        </Suspense>
 
-      {creators && creators.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {creators.map((creator) => (
-            <Link key={creator.id} href={`/c/${creator.slug}`}>
-              <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-3">
-                    {creator.avatarUrl ? (
-                      <Image
-                        src={creator.avatarUrl}
-                        alt={creator.displayName}
-                        width={48}
-                        height={48}
-                        className="rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-lg font-semibold text-muted-foreground">
-                        {creator.displayName.slice(0, 1).toUpperCase()}
-                      </div>
-                    )}
-                    <div>
-                      <CardTitle className="text-base">
-                        {creator.displayName}
-                      </CardTitle>
-                      <CardDescription>@{creator.slug}</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                {creator.bio && (
-                  <CardContent className="pt-0">
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {creator.bio}
-                    </p>
-                  </CardContent>
-                )}
-              </Card>
-            </Link>
-          ))}
+        <div className="mb-8">
+          <p className="text-sm font-medium text-muted-foreground mb-3">
+            Topics
+          </p>
+          <DiscoverTopics />
         </div>
+      </div>
+
+      {isSearchOrTopic ? (
+        <section>
+          <h2 className="text-lg font-semibold tracking-tight mb-4">
+            {topicLabel
+              ? `Creators in ${topicLabel}`
+              : "Search results"}
+          </h2>
+          {searchCreators.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {searchCreators.map((creator) => (
+                <DiscoverCreatorCard
+                  key={creator.id}
+                  creator={creator}
+                  variant="grid"
+                />
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>No creators found</CardTitle>
+                <CardDescription>
+                  {q
+                    ? "Try a different search term."
+                    : topicLabel
+                      ? `No creators in ${topicLabel} yet.`
+                      : "No creators have joined yet. Be the first!"}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          )}
+        </section>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>No creators found</CardTitle>
-            <CardDescription>
-              {q
-                ? "Try a different search term."
-                : "No creators have joined yet. Be the first!"}
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <div className="space-y-12">
+          {recommendedCreators.length > 0 && (
+            <DiscoverCreatorCarousel
+              creators={recommendedCreators}
+              title="For you"
+              description="Based on your memberships and interests"
+            />
+          )}
+
+          <DiscoverCreatorCarousel
+            creators={trendingCreators}
+            title="Popular creators"
+            description="Creators with the most supporters"
+          />
+
+          <DiscoverCreatorCarousel
+            creators={newCreators}
+            title="New on Backr"
+            description="Recently joined creators"
+          />
+        </div>
       )}
     </div>
   );

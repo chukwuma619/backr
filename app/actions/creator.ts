@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { creators } from "@/lib/db/schema";
+import { creators, users } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { getCreatorByUserId } from "@/lib/db/queries";
 import { validateSlug } from "@/lib/creators/slug";
@@ -24,6 +24,7 @@ const createSchema = z.object({
     .min(1, "Display name is required")
     .max(200, "Display name must be at most 200 characters"),
   bio: z.string().max(1000).optional(),
+  category: z.string().optional(),
   avatarUrl: z.string().max(500).optional(),
   fiberNodeRpcUrl: z.union([z.string().url(), z.literal("")]).optional(),
 });
@@ -54,6 +55,7 @@ export async function createCreator(
     slug: formData.get("slug") as string,
     displayName: formData.get("displayName") as string,
     bio: (formData.get("bio") as string) || undefined,
+    category: (formData.get("category") as string) || undefined,
     avatarUrl: (formData.get("avatarUrl") as string) || undefined,
   };
 
@@ -78,7 +80,7 @@ export async function createCreator(
   const [existingSlug] = await db
     .select({ id: creators.id })
     .from(creators)
-    .where(eq(creators.slug, slugResult.slug))
+    .where(eq(creators.username, slugResult.slug))
     .limit(1);
 
   if (existingSlug) {
@@ -87,10 +89,10 @@ export async function createCreator(
 
   await db.insert(creators).values({
     userId: user.id,
-    slug: slugResult.slug,
+    username: slugResult.slug,
     displayName: parsed.data.displayName,
     bio: parsed.data.bio ?? null,
-    avatarUrl: parsed.data.avatarUrl ?? null,
+    category: parsed.data.category ?? null,
   });
 
   revalidatePath("/dashboard");
@@ -115,6 +117,7 @@ export async function updateCreator(
     slug: formData.get("slug") as string,
     displayName: formData.get("displayName") as string,
     bio: (formData.get("bio") as string) || undefined,
+    category: (formData.get("category") as string) || undefined,
     avatarUrl: (formData.get("avatarUrl") as string) || undefined,
     fiberNodeRpcUrl: (formData.get("fiberNodeRpcUrl") as string) || undefined,
   };
@@ -138,11 +141,11 @@ export async function updateCreator(
     return { errors: { slug: [slugResult.error] }, success: false };
   }
 
-  if (slugResult.slug !== creator.slug) {
+  if (slugResult.slug !== creator.username) {
     const [existingSlug] = await db
       .select({ id: creators.id })
       .from(creators)
-      .where(eq(creators.slug, slugResult.slug))
+      .where(eq(creators.username, slugResult.slug))
       .limit(1);
     if (existingSlug) {
       return { errors: { slug: ["This slug is already taken"] }, success: false };
@@ -152,16 +155,22 @@ export async function updateCreator(
   await db
     .update(creators)
     .set({
-      slug: slugResult.slug,
+      username: slugResult.slug,
       displayName: parsed.data.displayName,
       bio: parsed.data.bio ?? null,
-      avatarUrl: parsed.data.avatarUrl ?? null,
-      fiberNodeRpcUrl: parsed.data.fiberNodeRpcUrl?.trim()
-        ? parsed.data.fiberNodeRpcUrl.trim()
-        : null,
+      category: parsed.data.category ?? null,
       updatedAt: new Date(),
     })
     .where(eq(creators.id, creator.id));
+
+  await db
+    .update(users)
+    .set({
+      avatarUrl: parsed.data.avatarUrl?.trim() || null,
+      fiberNodeRpcUrl: parsed.data.fiberNodeRpcUrl?.trim() || null,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, creator.userId));
 
   revalidatePath("/dashboard");
   return { success: true };
@@ -182,9 +191,9 @@ export async function updateCreatorNostrPubkey(
   }
 
   await db
-    .update(creators)
+    .update(users)
     .set({ nostrPubkey: hex, updatedAt: new Date() })
-    .where(eq(creators.id, creator.id));
+    .where(eq(users.id, creator.userId));
 
   revalidatePath("/dashboard");
   return { success: true };

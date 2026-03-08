@@ -31,12 +31,16 @@ export function DiscoverSearch({
     [value, router, searchParams]
   );
 
+  const placeholder = searchParams.get("topic")
+    ? "Search within this topic..."
+    : "Search creators or topics...";
+
   return (
     <form onSubmit={handleSubmit} className={cn("relative", className)}>
       <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
       <Input
         type="search"
-        placeholder="Search creators..."
+        placeholder={placeholder}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         className="pl-9"

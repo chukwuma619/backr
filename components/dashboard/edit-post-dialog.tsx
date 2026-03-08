@@ -36,7 +36,7 @@ type FormValues = z.infer<typeof schema>;
 
 type EditPostDialogProps = {
   post: Post;
-  creator: Creator;
+  creator: Creator & { nostrPubkey?: string | null };
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };

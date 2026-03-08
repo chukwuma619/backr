@@ -1,3 +1,4 @@
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
 import { calculatePlatformFee } from "@/lib/platform-fee";
 import {
@@ -7,15 +8,21 @@ import {
   patronage,
   users,
   posts,
+  chats,
+  chatParticipants,
+  messages,
+  notifications,
 } from "@/lib/db/schema";
-import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, ne, notInArray, or, sql } from "drizzle-orm";
+
+const creatorUser = alias(users, "creator_user");
 
 export async function getCreatorBySlug(slug: string) {
   try {
     const [row] = await db
       .select({ creator: creators })
       .from(creators)
-      .where(eq(creators.slug, slug))
+      .where(eq(creators.username, slug))
       .limit(1);
     if (!row) return { data: null, error: null };
 
@@ -29,21 +36,29 @@ export async function getCreatorBySlug(slug: string) {
   }
 }
 
-export async function getAllCreatorsForDiscovery(search?: string) {
+export async function getAllCreatorsForDiscovery(
+  search?: string,
+  category?: string
+) {
   try {
     const term = search?.trim() ? `%${search.trim()}%` : null;
+    const conditions = [];
+    if (term) {
+      conditions.push(
+        or(
+          ilike(creators.displayName, term),
+          ilike(creators.username, term),
+          ilike(creators.bio, term)
+        )!
+      );
+    }
+    if (category?.trim()) {
+      conditions.push(eq(creators.category, category.trim()));
+    }
     const rows = await db
       .select()
       .from(creators)
-      .where(
-        term
-          ? or(
-              ilike(creators.displayName, term),
-              ilike(creators.slug, term),
-              ilike(creators.bio, term)
-            )
-          : undefined
-      )
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(creators.createdAt));
 
     return { data: rows, error: null };
@@ -53,14 +68,81 @@ export async function getAllCreatorsForDiscovery(search?: string) {
   }
 }
 
-export async function getCreatorByUserId(userId: string) {
+export async function getTrendingCreators(limit = 12) {
   try {
-    const [creatorRow] = await db
+    const rows = await db
+      .select({
+        creator: creators,
+        patronCount: sql<number>`COUNT(DISTINCT ${patronage.patronUserId})`,
+      })
+      .from(creators)
+      .leftJoin(patronage, and(eq(patronage.creatorId, creators.id), eq(patronage.status, "active")))
+      .groupBy(creators.id)
+      .orderBy(sql`COUNT(DISTINCT ${patronage.patronUserId}) DESC`)
+      .limit(limit);
+
+    return { data: rows.map((r) => r.creator), error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getNewCreators(limit = 12) {
+  try {
+    const rows = await db
       .select()
       .from(creators)
+      .orderBy(desc(creators.createdAt))
+      .limit(limit);
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getCreatorsByCategory(
+  category: string,
+  limit = 12
+) {
+  try {
+    const rows = await db
+      .select()
+      .from(creators)
+      .where(eq(creators.category, category))
+      .orderBy(desc(creators.createdAt))
+      .limit(limit);
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getCreatorByUserId(userId: string) {
+  try {
+    const [row] = await db
+      .select({
+        creator: creators,
+        userNostrPubkey: users.nostrPubkey,
+        userAvatarUrl: users.avatarUrl,
+        userFiberNodeRpcUrl: users.fiberNodeRpcUrl,
+      })
+      .from(creators)
+      .innerJoin(users, eq(creators.userId, users.id))
       .where(eq(creators.userId, userId))
       .limit(1);
-    return { data: creatorRow, error: null };
+    if (!row) return { data: null, error: null };
+    return {
+      data: {
+        ...row.creator,
+        nostrPubkey: row.userNostrPubkey,
+        avatarUrl: row.userAvatarUrl,
+        fiberNodeRpcUrl: row.userFiberNodeRpcUrl,
+      },
+      error: null,
+    };
   } catch (error) {
     console.error(error);
     return { data: null, error: error as Error };
@@ -319,6 +401,42 @@ export async function canPatronAccessPost(
   }
 }
 
+export async function getRecommendedCreatorsForUser(
+  userId: string,
+  limit = 6
+) {
+  try {
+    const followedCreatorIds = await db
+      .select({ creatorId: patronage.creatorId })
+      .from(patronage)
+      .where(
+        and(
+          eq(patronage.patronUserId, userId),
+          eq(patronage.status, "active")
+        )
+      );
+
+    const excludedIds = followedCreatorIds.map((r) => r.creatorId);
+
+    const whereConditions = [ne(creators.userId, userId)];
+    if (excludedIds.length > 0) {
+      whereConditions.push(notInArray(creators.id, excludedIds));
+    }
+
+    const rows = await db
+      .select()
+      .from(creators)
+      .where(and(...whereConditions))
+      .orderBy(desc(creators.createdAt))
+      .limit(limit);
+
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
 export async function getGatedFeedForPatron(patronUserId: string) {
   try {
     const patronages = await db
@@ -347,7 +465,7 @@ export async function getGatedFeedForPatron(patronUserId: string) {
       .select({
         post: posts,
         creatorDisplayName: creators.displayName,
-        creatorSlug: creators.slug,
+        creatorUsername: creators.username,
         minTierId: posts.minTierId,
         minTierPrice: tiers.priceAmount,
         minTierName: tiers.name,
@@ -366,10 +484,10 @@ export async function getGatedFeedForPatron(patronUserId: string) {
         const minPrice = parseFloat(row.minTierPrice);
         return patronPrice >= minPrice;
       })
-      .map(({ post, creatorDisplayName, creatorSlug, minTierName }) => ({
+      .map(({ post, creatorDisplayName, creatorUsername, minTierName }) => ({
         post,
         creatorDisplayName,
-        creatorSlug,
+        creatorUsername,
         minTierName,
       }));
 
@@ -388,8 +506,8 @@ export async function getDuePatronagesForRenewal() {
         patronAddress: users.ckbAddress,
         patronFiberNodeRpcUrl: users.fiberNodeRpcUrl,
         creatorDisplayName: creators.displayName,
-        creatorSlug: creators.slug,
-        creatorFiberNodeRpcUrl: creators.fiberNodeRpcUrl,
+        creatorUsername: creators.username,
+        creatorFiberNodeRpcUrl: creatorUser.fiberNodeRpcUrl,
         tierName: tiers.name,
         tierPrice: tiers.priceAmount,
         tierBillingInterval: tiers.billingInterval,
@@ -398,6 +516,7 @@ export async function getDuePatronagesForRenewal() {
       .from(patronage)
       .innerJoin(users, eq(patronage.patronUserId, users.id))
       .innerJoin(creators, eq(patronage.creatorId, creators.id))
+      .innerJoin(creatorUser, eq(creators.userId, creatorUser.id))
       .innerJoin(tiers, eq(patronage.tierId, tiers.id))
       .where(
         and(
@@ -421,14 +540,15 @@ export async function getPatronagesByUserId(patronUserId: string) {
         patronage: patronage,
         creatorId: creators.id,
         creatorDisplayName: creators.displayName,
-        creatorSlug: creators.slug,
-        creatorAvatarUrl: creators.avatarUrl,
+        creatorUsername: creators.username,
+        creatorAvatarUrl: creatorUser.avatarUrl,
         tierName: tiers.name,
         tierPrice: tiers.priceAmount,
         tierCurrency: tiers.priceCurrency,
       })
       .from(patronage)
       .innerJoin(creators, eq(patronage.creatorId, creators.id))
+      .innerJoin(creatorUser, eq(creators.userId, creatorUser.id))
       .innerJoin(tiers, eq(patronage.tierId, tiers.id))
       .where(eq(patronage.patronUserId, patronUserId))
       .orderBy(desc(patronage.lastPaymentAt));
@@ -437,6 +557,459 @@ export async function getPatronagesByUserId(patronUserId: string) {
   } catch (error) {
     console.error(error);
     return { data: [], error: error as Error };
+  }
+}
+
+export async function getChatsForUser(userId: string) {
+  try {
+    const patronages = await db
+      .select({
+        creatorId: patronage.creatorId,
+        creatorDisplayName: creators.displayName,
+        creatorUsername: creators.username,
+        creatorAvatarUrl: creatorUser.avatarUrl,
+      })
+      .from(patronage)
+      .innerJoin(creators, eq(patronage.creatorId, creators.id))
+      .innerJoin(creatorUser, eq(creators.userId, creatorUser.id))
+      .where(
+        and(
+          eq(patronage.patronUserId, userId),
+          eq(patronage.status, "active")
+        )
+      );
+
+    const creatorIds = patronages.map((p) => p.creatorId);
+    const patronageByCreator = new Map(
+      patronages.map((p) => [
+        p.creatorId,
+        {
+          creatorDisplayName: p.creatorDisplayName,
+          creatorUsername: p.creatorUsername,
+          creatorAvatarUrl: p.creatorAvatarUrl,
+        },
+      ])
+    );
+
+    const [myCreator] = await db
+      .select({
+        creatorId: creators.id,
+        creatorDisplayName: creators.displayName,
+        creatorUsername: creators.username,
+        creatorAvatarUrl: creatorUser.avatarUrl,
+      })
+      .from(creators)
+      .innerJoin(creatorUser, eq(creators.userId, creatorUser.id))
+      .where(eq(creators.userId, userId))
+      .limit(1);
+    const myCreatorId = myCreator?.creatorId;
+    if (myCreatorId && myCreator) {
+      patronageByCreator.set(myCreatorId, {
+        creatorDisplayName: myCreator.creatorDisplayName,
+        creatorUsername: myCreator.creatorUsername,
+        creatorAvatarUrl: myCreator.creatorAvatarUrl,
+      });
+    }
+
+    const allCreatorIds =
+      creatorIds.length > 0 || myCreatorId
+        ? [...new Set([...creatorIds, ...(myCreatorId ? [myCreatorId] : [])])]
+        : [];
+    if (allCreatorIds.length === 0) return { data: [], error: null };
+
+    const userChatRows = await db
+      .select({ chat: chats })
+      .from(chats)
+      .innerJoin(chatParticipants, eq(chatParticipants.chatId, chats.id))
+      .where(
+        and(
+          eq(chatParticipants.userId, userId),
+          inArray(chats.creatorId, allCreatorIds)
+        )
+      );
+
+    const deduped = new Map<string, (typeof chats.$inferSelect)>();
+    for (const row of userChatRows) {
+      if (!deduped.has(row.chat.id)) {
+        deduped.set(row.chat.id, row.chat);
+      }
+    }
+
+    const chatIds = Array.from(deduped.keys());
+    const lastMessages = await db
+      .select({
+        chatId: messages.chatId,
+        id: messages.id,
+        body: messages.body,
+        senderId: messages.senderId,
+        createdAt: messages.createdAt,
+      })
+      .from(messages)
+      .where(inArray(messages.chatId, chatIds))
+      .orderBy(desc(messages.createdAt));
+
+    const lastMessageByChat = new Map<string, (typeof lastMessages)[0]>();
+    for (const m of lastMessages) {
+      if (!lastMessageByChat.has(m.chatId)) {
+        lastMessageByChat.set(m.chatId, m);
+      }
+    }
+
+    const data = Array.from(deduped.values()).map((chat) => {
+      const meta = patronageByCreator.get(chat.creatorId)!;
+      const lastMsg = lastMessageByChat.get(chat.id);
+      return {
+        chat,
+        creatorDisplayName: meta.creatorDisplayName,
+        creatorUsername: meta.creatorUsername,
+        creatorAvatarUrl: meta.creatorAvatarUrl,
+        lastMessage: lastMsg ?? null,
+      };
+    });
+
+    data.sort((a, b) => {
+      const aTime = a.lastMessage?.createdAt ?? a.chat.createdAt;
+      const bTime = b.lastMessage?.createdAt ?? b.chat.createdAt;
+      return bTime.getTime() - aTime.getTime();
+    });
+
+    return { data, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getOrCreateGroupChat(creatorId: string, userId: string) {
+  try {
+    const [existing] = await db
+      .select()
+      .from(chats)
+      .where(and(eq(chats.creatorId, creatorId), eq(chats.type, "group")))
+      .limit(1);
+
+    if (existing) {
+      const [participant] = await db
+        .select()
+        .from(chatParticipants)
+        .where(
+          and(
+            eq(chatParticipants.chatId, existing.id),
+            eq(chatParticipants.userId, userId)
+          )
+        )
+        .limit(1);
+
+      if (!participant) {
+        await db.insert(chatParticipants).values({
+          chatId: existing.id,
+          userId,
+        });
+      }
+      return { data: existing, error: null };
+    }
+
+    const [creator] = await db
+      .select({ userId: creators.userId })
+      .from(creators)
+      .where(eq(creators.id, creatorId))
+      .limit(1);
+    if (!creator) return { data: null, error: new Error("Creator not found") };
+
+    const [created] = await db
+      .insert(chats)
+      .values({ type: "group", creatorId })
+      .returning();
+    if (!created) return { data: null, error: new Error("Failed to create chat") };
+
+    await db.insert(chatParticipants).values([
+      { chatId: created.id, userId: creator.userId },
+      { chatId: created.id, userId },
+    ]);
+
+    return { data: created, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+}
+
+export async function getOrCreateDirectChat(
+  creatorId: string,
+  patronUserId: string
+) {
+  try {
+    const [creator] = await db
+      .select({ userId: creators.userId })
+      .from(creators)
+      .where(eq(creators.id, creatorId))
+      .limit(1);
+    if (!creator) return { data: null, error: new Error("Creator not found") };
+
+    const [existing] = await db
+      .select()
+      .from(chats)
+      .where(
+        and(
+          eq(chats.creatorId, creatorId),
+          eq(chats.type, "direct"),
+          eq(chats.patronUserId, patronUserId)
+        )
+      )
+      .limit(1);
+
+    if (existing) return { data: existing, error: null };
+
+    const [created] = await db
+      .insert(chats)
+      .values({
+        type: "direct",
+        creatorId,
+        patronUserId,
+      })
+      .returning();
+    if (!created) return { data: null, error: new Error("Failed to create chat") };
+
+    await db.insert(chatParticipants).values([
+      { chatId: created.id, userId: creator.userId },
+      { chatId: created.id, userId: patronUserId },
+    ]);
+
+    return { data: created, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+}
+
+export async function getMessagesByChatId(chatId: string, limit = 50) {
+  try {
+    const rows = await db
+      .select({
+        message: messages,
+        senderAvatarUrl: users.avatarUrl,
+        creatorDisplayName: creators.displayName,
+      })
+      .from(messages)
+      .innerJoin(users, eq(messages.senderId, users.id))
+      .leftJoin(creators, eq(creators.userId, messages.senderId))
+      .where(eq(messages.chatId, chatId))
+      .orderBy(desc(messages.createdAt))
+      .limit(limit);
+
+    const data = rows
+      .map((r) => ({
+        ...r.message,
+        senderDisplayName: r.creatorDisplayName ?? `User ${r.message.senderId.slice(0, 8)}`,
+        senderAvatarUrl: r.senderAvatarUrl ?? null,
+      }))
+      .reverse();
+
+    return { data, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getChatById(chatId: string) {
+  try {
+    const [row] = await db
+      .select()
+      .from(chats)
+      .where(eq(chats.id, chatId))
+      .limit(1);
+    return { data: row ?? null, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+}
+
+export async function canUserAccessChat(chatId: string, userId: string) {
+  try {
+    const [participant] = await db
+      .select()
+      .from(chatParticipants)
+      .where(
+        and(
+          eq(chatParticipants.chatId, chatId),
+          eq(chatParticipants.userId, userId)
+        )
+      )
+      .limit(1);
+    return !!participant;
+  } catch {
+    return false;
+  }
+}
+
+export async function sendMessage(chatId: string, senderId: string, body: string) {
+  try {
+    const [msg] = await db
+      .insert(messages)
+      .values({ chatId, senderId, body })
+      .returning();
+
+    await db
+      .update(chats)
+      .set({ updatedAt: new Date() })
+      .where(eq(chats.id, chatId));
+
+    return { data: msg, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+}
+
+export async function addPatronToGroupChat(creatorId: string, patronUserId: string) {
+  try {
+    const [chat] = await db
+      .select()
+      .from(chats)
+      .where(and(eq(chats.creatorId, creatorId), eq(chats.type, "group")))
+      .limit(1);
+
+    if (!chat) return { error: new Error("Group chat not found") };
+
+    const [existing] = await db
+      .select()
+      .from(chatParticipants)
+      .where(
+        and(
+          eq(chatParticipants.chatId, chat.id),
+          eq(chatParticipants.userId, patronUserId)
+        )
+      )
+      .limit(1);
+
+    if (existing) return { error: null };
+
+    await db.insert(chatParticipants).values({
+      chatId: chat.id,
+      userId: patronUserId,
+    });
+    return { error: null };
+  } catch (error) {
+    console.error(error);
+    return { error: error as Error };
+  }
+}
+
+export async function getNotificationsForUser(userId: string, limit = 50) {
+  try {
+    const rows = await db
+      .select({
+        notification: notifications,
+        creatorDisplayName: creators.displayName,
+        creatorUsername: creators.username,
+        creatorAvatarUrl: creatorUser.avatarUrl,
+        postTitle: posts.title,
+      })
+      .from(notifications)
+      .innerJoin(creators, eq(notifications.creatorId, creators.id))
+      .innerJoin(creatorUser, eq(creators.userId, creatorUser.id))
+      .leftJoin(posts, and(eq(notifications.entityId, posts.id), eq(notifications.type, "new_post")))
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt))
+      .limit(limit);
+
+    const data = rows.map((r) => ({
+      id: r.notification.id,
+      type: r.notification.type,
+      entityId: r.notification.entityId,
+      creatorId: r.notification.creatorId,
+      creatorDisplayName: r.creatorDisplayName,
+      creatorUsername: r.creatorUsername,
+      creatorAvatarUrl: r.creatorAvatarUrl,
+      postTitle: r.postTitle,
+      readAt: r.notification.readAt,
+      createdAt: r.notification.createdAt,
+    }));
+
+    return { data, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function createNotificationsForNewPost(
+  postId: string,
+  creatorId: string,
+  minTierId: string
+) {
+  try {
+    const [postTier] = await db
+      .select({ minPrice: tiers.priceAmount })
+      .from(tiers)
+      .where(eq(tiers.id, minTierId))
+      .limit(1);
+    if (!postTier) return { error: null };
+
+    const patrons = await db
+      .select({
+        patronUserId: patronage.patronUserId,
+        tierPrice: tiers.priceAmount,
+      })
+      .from(patronage)
+      .innerJoin(tiers, eq(patronage.tierId, tiers.id))
+      .where(
+        and(
+          eq(patronage.creatorId, creatorId),
+          eq(patronage.status, "active")
+        )
+      );
+
+    const eligible = patrons.filter(
+      (p) => parseFloat(p.tierPrice) >= parseFloat(postTier.minPrice)
+    );
+    if (eligible.length === 0) return { error: null };
+
+    await db.insert(notifications).values(
+      eligible.map((p) => ({
+        userId: p.patronUserId,
+        type: "new_post" as const,
+        entityId: postId,
+        creatorId,
+      }))
+    );
+    return { error: null };
+  } catch (error) {
+    console.error(error);
+    return { error: error as Error };
+  }
+}
+
+export async function createNotificationsForNewMessage(
+  chatId: string,
+  senderId: string,
+  creatorId: string
+) {
+  try {
+    const participants = await db
+      .select({ userId: chatParticipants.userId })
+      .from(chatParticipants)
+      .where(eq(chatParticipants.chatId, chatId));
+
+    const recipients = participants
+      .filter((p) => p.userId !== senderId)
+      .map((p) => p.userId);
+    if (recipients.length === 0) return { error: null };
+
+    await db.insert(notifications).values(
+      recipients.map((userId) => ({
+        userId,
+        type: "new_message" as const,
+        entityId: chatId,
+        creatorId,
+      }))
+    );
+    return { error: null };
+  } catch (error) {
+    console.error(error);
+    return { error: error as Error };
   }
 }
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { creators, tiers } from "@/lib/db/schema";
+import { creators, tiers, users } from "@/lib/db/schema";
 import { newInvoice } from "@/lib/fiber/fiber-rpc";
 import {
   calculatePlatformFee,
@@ -27,13 +27,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const [creator] = await db
-    .select()
+  const [row] = await db
+    .select({
+      creator: creators,
+      creatorFiberNodeRpcUrl: users.fiberNodeRpcUrl,
+    })
     .from(creators)
+    .innerJoin(users, eq(creators.userId, users.id))
     .where(eq(creators.id, creatorId))
     .limit(1);
 
-  if (!creator?.fiberNodeRpcUrl) {
+  const creator = row?.creator;
+  const creatorFiberNodeRpcUrl = row?.creatorFiberNodeRpcUrl;
+
+  if (!creator || !creatorFiberNodeRpcUrl) {
     return NextResponse.json(
       { error: "Creator has not set up Fiber payments" },
       { status: 400 }
@@ -61,7 +68,7 @@ export async function POST(request: NextRequest) {
     process.env.PLATFORM_FIBER_RPC_URL?.trim();
 
   try {
-    const creatorResult = await newInvoice(creator.fiberNodeRpcUrl, {
+    const creatorResult = await newInvoice(creatorFiberNodeRpcUrl, {
       amountCkb: creatorAmount,
       currency: "CKB",
       description: `${tier.name} - ${creator.displayName}`,

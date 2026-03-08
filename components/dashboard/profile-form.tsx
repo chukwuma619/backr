@@ -13,9 +13,17 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { DISCOVER_TOPICS } from "@/lib/discover/constants";
 import {
   Card,
   CardContent,
@@ -39,13 +47,23 @@ const schema = z.object({
     ),
   displayName: z.string().min(1).max(200),
   bio: z.string().max(1000).optional(),
+  category: z.string().optional(),
   avatarUrl: z.string().max(500).optional(),
   fiberNodeRpcUrl: z.union([z.string().url(), z.literal("")]).optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-export function ProfileForm({ data }: { data: Creator }) {
+export function ProfileForm({
+  data,
+}: {
+  data: Creator & {
+    avatarUrl?: string | null;
+    fiberNodeRpcUrl?: string | null;
+    nostrPubkey?: string | null;
+    category?: string | null;
+  };
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [nostrStatus, setNostrStatus] = useState<
@@ -56,9 +74,10 @@ export function ProfileForm({ data }: { data: Creator }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      slug: data.slug,
+      slug: data.username,
       displayName: data.displayName,
       bio: data.bio || "",
+      category: data.category || "",
       avatarUrl: data.avatarUrl || "",
       fiberNodeRpcUrl: data.fiberNodeRpcUrl || "",
     },
@@ -70,6 +89,7 @@ export function ProfileForm({ data }: { data: Creator }) {
     formData.set("slug", values.slug.trim().toLowerCase());
     formData.set("displayName", values.displayName.trim());
     if (values.bio) formData.set("bio", values.bio.trim());
+    if (values.category) formData.set("category", values.category);
     if (values.avatarUrl) formData.set("avatarUrl", values.avatarUrl.trim());
     if (values.fiberNodeRpcUrl) formData.set("fiberNodeRpcUrl", values.fiberNodeRpcUrl.trim());
     const result = await updateCreator({} as never, formData);
@@ -153,6 +173,34 @@ export function ProfileForm({ data }: { data: Creator }) {
                   <FormControl>
                     <Textarea {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category (optional)</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || ""}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {DISCOVER_TOPICS.map(({ slug, label }) => (
+                        <SelectItem key={slug} value={slug}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
