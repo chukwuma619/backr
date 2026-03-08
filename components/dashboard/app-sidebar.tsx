@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   Home,
   Compass,
@@ -12,60 +11,56 @@ import {
 import {
   Sidebar,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
+  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { NavMain } from "@/components/dashboard/nav-main";
+import { NavUser } from "@/components/dashboard/nav-user";
+import { BecomeACreatorForm } from "@/components/dashboard/become-a-creator-form";
 
-const navItems = [
-  { href: "/dashboard", label: "Home", icon: Home },
-  { href: "/dashboard/discover", label: "Explore", icon: Compass },
-  { href: "/dashboard/chats", label: "Chats", icon: MessageCircle },
-  { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
-] as const;
+const navMainItems = [
+  { title: "Home", url: "/dashboard", icon: Home },
+  { title: "Explore", url: "/dashboard/discover", icon: Compass },
+  { title: "Chats", url: "/dashboard/chats", icon: MessageCircle },
+  { title: "Notifications", url: "/dashboard/notifications", icon: Bell },
+  { title: "Settings", url: "/dashboard/settings", icon: Settings },
+];
 
-export function AppSidebar() {
-  const pathname = usePathname();
-
+export function AppSidebar({
+  user,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  user: {
+    ckbAddress: string;
+    fiberNodeRpcUrl: string | null;
+  };
+}) {
   return (
-    <Sidebar collapsible="icon" side="left">
-      <SidebarHeader className="border-b border-sidebar-border">
-        <Link
-          href="/"
-          className="flex items-center gap-2 px-2 py-3 text-sm font-medium text-sidebar-foreground hover:text-sidebar-accent-foreground"
-        >
-          Backr
-        </Link>
+    <Sidebar collapsible="icon" side="left" {...props}>
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip="Backr">
+              <Link href="/" className="flex items-center gap-2">
+                <span className="text-base font-semibold">Backr</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map(({ href, label, icon: Icon }) => (
-                <SidebarMenuItem key={href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={
-                      pathname === href || pathname.startsWith(`${href}/`)
-                    }
-                    tooltip={label}
-                  >
-                    <Link href={href}>
-                      <Icon className="size-4" />
-                      <span>{label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <NavMain items={navMainItems} />
+        <BecomeACreatorForm />
       </SidebarContent>
+      <SidebarFooter className="mt-10">
+        <NavUser user={user} />
+      </SidebarFooter>
+      <SidebarRail/>
     </Sidebar>
   );
 }

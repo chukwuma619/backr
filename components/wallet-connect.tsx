@@ -4,11 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useCcc, useSigner } from "@ckb-ccc/connector-react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { Button } from "@/components/ui/button";
+import { truncateAddress } from "@/lib/utils";
 
-function truncateAddress(address: string, head = 8, tail = 6) {
-  if (address.length <= head + tail) return address;
-  return `${address.slice(0, head)}…${address.slice(-tail)}`;
-}
+
 
 export function WalletConnect() {
   const { open, disconnect, signerInfo } = useCcc();
