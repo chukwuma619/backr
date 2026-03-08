@@ -31,7 +31,6 @@ export async function createTier(
   if (!user) redirect("/");
 
   const { data: creator } = await getCreatorByUserId(user.id);
-  if (!creator) redirect("/onboarding");
 
   const parsed = tierSchema.safeParse({
     name: formData.get("name"),
@@ -73,7 +72,6 @@ export async function updateTier(
   if (!user) redirect("/");
 
   const { data: creator } = await getCreatorByUserId(user.id);
-  if (!creator) redirect("/onboarding");
 
   const [tier] = await db
     .select()
@@ -124,7 +122,6 @@ export async function deleteTier(tierId: string): Promise<void> {
   if (!user) redirect("/");
 
   const { data: creator } = await getCreatorByUserId(user.id);
-  if (!creator) redirect("/onboarding");
 
   const [tier] = await db
     .select()
@@ -132,7 +129,7 @@ export async function deleteTier(tierId: string): Promise<void> {
     .where(eq(tiers.id, tierId))
     .limit(1);
 
-  if (!tier || tier.creatorId !== creator.id) {
+  if (!tier || tier.creatorId !== creator?.id) {
     return;
   }
 

@@ -550,10 +550,50 @@ export async function getPatronagesByUserId(patronUserId: string) {
       .innerJoin(creators, eq(patronage.creatorId, creators.id))
       .innerJoin(creatorUser, eq(creators.userId, creatorUser.id))
       .innerJoin(tiers, eq(patronage.tierId, tiers.id))
-      .where(eq(patronage.patronUserId, patronUserId))
+      .where(
+        and(
+          eq(patronage.patronUserId, patronUserId),
+          eq(patronage.status, "active")
+        )
+      )
       .orderBy(desc(patronage.lastPaymentAt));
 
     return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getBillingHistoryForUser(patronUserId: string, limit = 50) {
+  try {
+    const rows = await db
+      .select({
+        patronage: patronage,
+        creatorDisplayName: creators.displayName,
+        creatorUsername: creators.username,
+        tierName: tiers.name,
+      })
+      .from(patronage)
+      .innerJoin(creators, eq(patronage.creatorId, creators.id))
+      .innerJoin(tiers, eq(patronage.tierId, tiers.id))
+      .where(eq(patronage.patronUserId, patronUserId))
+      .orderBy(desc(patronage.lastPaymentAt), desc(patronage.createdAt))
+      .limit(limit);
+
+    const data = rows.map((r) => ({
+      id: r.patronage.id,
+      amount: r.patronage.amount,
+      currency: r.patronage.currency,
+      status: r.patronage.status,
+      createdAt: r.patronage.createdAt,
+      lastPaymentAt: r.patronage.lastPaymentAt,
+      creatorDisplayName: r.creatorDisplayName,
+      creatorUsername: r.creatorUsername,
+      tierName: r.tierName,
+    }));
+
+    return { data, error: null };
   } catch (error) {
     console.error(error);
     return { data: [], error: error as Error };

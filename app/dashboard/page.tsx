@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { getCreatorByUserId } from "@/lib/db/queries";
 import { HomeFeedSection } from "@/components/dashboard/home-feed-section";
 import { RecommendationsSection } from "@/components/dashboard/recommendations-section";
 
@@ -10,13 +9,6 @@ export default async function DashboardPage() {
     redirect("/");
   }
 
-  const { data: creator, error } = await getCreatorByUserId(user.id);
-  if (error) {
-    return <div>Error: {error.message}</div>;
-  }
-  if (!creator) {
-    redirect("/onboarding");
-  }
 
   return (
     <div className="max-w-2xl mx-auto w-full space-y-8">
