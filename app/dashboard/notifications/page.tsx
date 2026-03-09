@@ -12,7 +12,7 @@ export default async function NotificationsPage() {
   const { data: notifications } = await getNotificationsForUser(user.id);
 
   return (
-    <div className="max-w-2xl mx-auto w-full">
+    <div className=" w-full">
       <div className="mb-4">
         <h1 className="text-2xl font-semibold tracking-tight">Notifications</h1>
         <p className="text-muted-foreground text-sm mt-1">

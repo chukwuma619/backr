@@ -25,7 +25,7 @@ export default function SettingsLayout({
     SETTINGS_TABS.find((t) => t.value === segment)?.value ?? "basic";
 
   return (
-    <div className="max-w-2xl mx-auto w-full space-y-6">
+    <div className="w-full space-y-6">
       <Tabs value={tab} className="w-full">
         <TabsList>
           {SETTINGS_TABS.map((t) => (

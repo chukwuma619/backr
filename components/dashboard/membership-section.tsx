@@ -19,10 +19,9 @@ type PatronageItem = {
   creatorUsername: string;
   creatorAvatarUrl: string | null;
   tierName: string;
-  tierPrice: string;
-  tierCurrency: string;
+  tierAmount: string;
   tierId: string;
-  tiers: { id: string; name: string; priceAmount: string; priceCurrency: string }[];
+  tiers: { id: string; name: string; amount: string }[];
 };
 
 export function MembershipSection({
@@ -60,8 +59,7 @@ export function MembershipSection({
             <ItemContent>
               <ItemTitle>{p.creatorDisplayName}</ItemTitle>
               <ItemDescription>
-                @{p.creatorUsername} · {p.tierName} · {p.tierPrice}{" "}
-                {p.tierCurrency}
+                @{p.creatorUsername} · {p.tierName} · {p.tierAmount} CKB
               </ItemDescription>
             </ItemContent>
           </Link>

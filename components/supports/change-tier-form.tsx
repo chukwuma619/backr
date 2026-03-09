@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
-type Tier = { id: string; name: string; priceAmount: string; priceCurrency: string };
+type Tier = { id: string; name: string; amount: string };
 
 export function ChangeTierForm({
   patronageId,
@@ -64,7 +64,7 @@ export function ChangeTierForm({
           </SelectItem>
           {otherTiers.map((t) => (
             <SelectItem key={t.id} value={t.id}>
-              {t.name} · {t.priceAmount} {t.priceCurrency}
+              {t.name} · {t.amount} CKB
             </SelectItem>
           ))}
         </SelectContent>

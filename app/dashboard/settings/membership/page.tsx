@@ -24,16 +24,19 @@ export default async function MembershipPage() {
         creatorUsername: p.creatorUsername,
         creatorAvatarUrl: p.creatorAvatarUrl,
         tierName: p.tierName,
-        tierPrice: p.tierPrice,
-        tierCurrency: p.tierCurrency,
+        tierAmount: p.tierAmount,
         tierId: p.patronage.tierId,
-        tiers: tiers ?? [],
+        tiers: (tiers ?? []).map((t) => ({
+          id: t.id,
+          name: t.name,
+          amount: t.amount,
+        })),
       };
     })
   );
 
   return (
-    <div className="max-w-2xl mx-auto w-full">
+    <div className="w-full">
       <div className="mb-4">
         <h1 className="text-2xl font-semibold tracking-tight">Membership</h1>
         <p className="text-muted-foreground text-sm mt-1">

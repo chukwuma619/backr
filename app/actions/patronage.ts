@@ -45,13 +45,14 @@ export async function changePatronageTier(patronageId: string, newTierId: string
     .update(patronage)
     .set({
       tierId: newTier.id,
-      amount: newTier.priceAmount,
+      amount: newTier.amount,
       updatedAt: new Date(),
     })
     .where(eq(patronage.id, patronageId));
 
   revalidatePath("/supports");
   revalidatePath("/feed");
+  revalidatePath("/dashboard/settings/membership");
   return { success: true };
 }
 
@@ -81,5 +82,6 @@ export async function cancelPatronage(patronageId: string) {
 
   revalidatePath("/supports");
   revalidatePath("/feed");
+  revalidatePath("/dashboard/settings/membership");
   return { success: true };
 }
