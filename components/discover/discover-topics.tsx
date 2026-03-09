@@ -10,7 +10,7 @@ export function DiscoverTopics() {
   const selectedTopic = searchParams.get("topic");
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
+    <div className="flex gap-2 flex-wrap pb-2 -mx-1 px-1 ">
       <Link
         href="/dashboard/discover"
         className={cn(
