@@ -33,12 +33,14 @@ const navMainItems = [
 
 export function AppSidebar({
   user,
+  isCreator,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   user: {
     ckbAddress: string;
     userType: string;
   };
+  isCreator?: boolean;
 }) {
   return (
     <Sidebar collapsible="icon" side="left" {...props}>
@@ -55,7 +57,7 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMainItems} />
-        <BecomeACreatorForm />
+        <BecomeACreatorForm isCreator={isCreator} />
       </SidebarContent>
       <SidebarFooter className="mt-10">
         <NavUser user={user} />

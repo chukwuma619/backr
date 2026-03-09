@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { getCreatorForDashboard } from "@/lib/creators/get-creator-for-dashboard";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/app-sidebar";
 
@@ -12,6 +13,8 @@ export default async function DashboardLayout({
   if (!user) {
     redirect("/");
   }
+
+  const { creator } = await getCreatorForDashboard();
 
   return (
     <SidebarProvider
@@ -27,6 +30,7 @@ export default async function DashboardLayout({
           ckbAddress: user.ckbAddress,
           userType: user.userType,
         }}
+        isCreator={!!creator}
         variant="inset"
       />
       <SidebarInset>

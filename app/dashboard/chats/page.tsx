@@ -43,7 +43,7 @@ export default async function ChatsPage({
     })) ?? [];
 
   return (
-    <div className="max-w-4xl mx-auto w-full">
+    <div className=" mx-auto w-full">
       <div className="mb-4">
         <h1 className="text-2xl font-semibold tracking-tight">Chats</h1>
         <p className="text-muted-foreground text-sm mt-1">

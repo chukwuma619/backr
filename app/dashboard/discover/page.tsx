@@ -57,14 +57,14 @@ export default async function DashboardDiscoverPage({
 
   if (searchResult.error) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className=" mx-auto px-4 py-8">
         <p className="text-destructive">Error loading creators.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto w-full px-4 py-8 space-y-10">
+    <div className=" mx-auto w-full px-4 py-8 space-y-10">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight mb-2">
           Discover creators
