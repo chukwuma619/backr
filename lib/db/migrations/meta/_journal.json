@@ -85,6 +85,13 @@
       "when": 1772934786341,
       "tag": "0011_nice_squirrel_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1773072997802,
+      "tag": "0012_loud_ultimates",
+      "breakpoints": true
     }
   ]
 }
