@@ -4,7 +4,6 @@ import { calculatePlatformFee } from "@/lib/platform-fee";
 import {
   creators,
   tiers,
-  perks,
   patronage,
   users,
   posts,
@@ -152,7 +151,7 @@ export async function getCreatorByUserId(userId: string) {
 export async function getTiersByCreatorId(creatorId: string) {
   try {
     const rows = await db
-      .select({ id: tiers.id, name: tiers.name, priceAmount: tiers.priceAmount, priceCurrency: tiers.priceCurrency })
+      .select({ id: tiers.id, name: tiers.name, amount: tiers.amount, coverImageUrl: tiers.coverImageUrl })
       .from(tiers)
       .where(eq(tiers.creatorId, creatorId))
       .orderBy(tiers.createdAt);
@@ -163,36 +162,7 @@ export async function getTiersByCreatorId(creatorId: string) {
   }
 }
 
-export async function getTiersAndPerksByCreatorId(creatorId: string) {
-  try {
-    const rows = await db
-      .select({ tier: tiers, perk: perks })
-      .from(tiers)
-      .leftJoin(perks, eq(tiers.id, perks.tierId))
-      .where(eq(tiers.creatorId, creatorId));
 
-    const tierMap = new Map<
-      string,
-      (typeof tiers.$inferSelect) & { perks: (typeof perks.$inferSelect)[] }
-    >();
-    for (const { tier, perk } of rows) {
-      const existing = tierMap.get(tier.id);
-      if (existing) {
-        if (perk) existing.perks.push(perk);
-      } else {
-        tierMap.set(tier.id, {
-          ...tier,
-          perks: perk ? [perk] : [],
-        });
-      }
-    }
-    const data = Array.from(tierMap.values());
-    return { data, error: null };
-  } catch (error) {
-    console.error(error);
-    return { data: [], error: error as Error };
-  }
-}
 
 export async function createPatronage(data: {
   patronUserId: string;
@@ -372,17 +342,16 @@ export async function canPatronAccessPost(
     const [post] = await db
       .select({
         creatorId: posts.creatorId,
-        minTierId: posts.minTierId,
-        minTierPrice: tiers.priceAmount,
+        minTierPrice: tiers.amount,
       })
       .from(posts)
-      .innerJoin(tiers, eq(posts.minTierId, tiers.id))
+      .innerJoin(tiers, eq(posts.creatorId, tiers.creatorId))
       .where(eq(posts.id, postId))
       .limit(1);
     if (!post) return false;
 
     const [pat] = await db
-      .select({ tierPrice: tiers.priceAmount })
+      .select({ tierAmount: tiers.amount })
       .from(patronage)
       .innerJoin(tiers, eq(patronage.tierId, tiers.id))
       .where(
@@ -395,7 +364,7 @@ export async function canPatronAccessPost(
       .limit(1);
     if (!pat) return false;
 
-    return parseFloat(pat.tierPrice) >= parseFloat(post.minTierPrice);
+    return parseFloat(pat.tierAmount) >= parseFloat(post.minTierPrice);
   } catch {
     return false;
   }
@@ -443,7 +412,7 @@ export async function getGatedFeedForPatron(patronUserId: string) {
       .select({
         creatorId: patronage.creatorId,
         tierId: patronage.tierId,
-        tierPrice: tiers.priceAmount,
+        tierAmount: tiers.amount,
       })
       .from(patronage)
       .innerJoin(tiers, eq(patronage.tierId, tiers.id))
@@ -458,7 +427,7 @@ export async function getGatedFeedForPatron(patronUserId: string) {
     if (creatorIds.length === 0) return { data: [], error: null };
 
     const patronTierByCreator = new Map(
-      patronages.map((p) => [p.creatorId, { tierId: p.tierId, price: p.tierPrice }])
+      patronages.map((p) => [p.creatorId, { tierId: p.tierId, amount: p.tierAmount }])
     );
 
     const allPosts = await db
@@ -466,13 +435,12 @@ export async function getGatedFeedForPatron(patronUserId: string) {
         post: posts,
         creatorDisplayName: creators.displayName,
         creatorUsername: creators.username,
-        minTierId: posts.minTierId,
-        minTierPrice: tiers.priceAmount,
+        minTierAmount: tiers.amount,
         minTierName: tiers.name,
       })
       .from(posts)
       .innerJoin(creators, eq(posts.creatorId, creators.id))
-      .innerJoin(tiers, eq(posts.minTierId, tiers.id))
+      .innerJoin(tiers, eq(posts.creatorId, tiers.creatorId))
       .where(inArray(posts.creatorId, creatorIds))
       .orderBy(desc(posts.publishedAt));
 
@@ -480,8 +448,8 @@ export async function getGatedFeedForPatron(patronUserId: string) {
       .filter((row) => {
         const patronTier = patronTierByCreator.get(row.post.creatorId);
         if (!patronTier) return false;
-        const patronPrice = parseFloat(patronTier.price);
-        const minPrice = parseFloat(row.minTierPrice);
+        const patronPrice = parseFloat(patronTier.amount);
+        const minPrice = parseFloat(row.minTierAmount);
         return patronPrice >= minPrice;
       })
       .map(({ post, creatorDisplayName, creatorUsername, minTierName }) => ({
@@ -509,9 +477,7 @@ export async function getDuePatronagesForRenewal() {
         creatorUsername: creators.username,
         creatorFiberNodeRpcUrl: creatorUser.fiberNodeRpcUrl,
         tierName: tiers.name,
-        tierPrice: tiers.priceAmount,
-        tierBillingInterval: tiers.billingInterval,
-        tierPriceCurrency: tiers.priceCurrency,
+        tierAmount: tiers.amount,
       })
       .from(patronage)
       .innerJoin(users, eq(patronage.patronUserId, users.id))
@@ -543,8 +509,7 @@ export async function getPatronagesByUserId(patronUserId: string) {
         creatorUsername: creators.username,
         creatorAvatarUrl: creatorUser.avatarUrl,
         tierName: tiers.name,
-        tierPrice: tiers.priceAmount,
-        tierCurrency: tiers.priceCurrency,
+        tierAmount: tiers.amount,
       })
       .from(patronage)
       .innerJoin(creators, eq(patronage.creatorId, creators.id))
@@ -982,7 +947,7 @@ export async function createNotificationsForNewPost(
 ) {
   try {
     const [postTier] = await db
-      .select({ minPrice: tiers.priceAmount })
+      .select({ minPrice: tiers.amount })
       .from(tiers)
       .where(eq(tiers.id, minTierId))
       .limit(1);
@@ -991,7 +956,7 @@ export async function createNotificationsForNewPost(
     const patrons = await db
       .select({
         patronUserId: patronage.patronUserId,
-        tierPrice: tiers.priceAmount,
+        tierAmount: tiers.amount,
       })
       .from(patronage)
       .innerJoin(tiers, eq(patronage.tierId, tiers.id))
@@ -1003,7 +968,7 @@ export async function createNotificationsForNewPost(
       );
 
     const eligible = patrons.filter(
-      (p) => parseFloat(p.tierPrice) >= parseFloat(postTier.minPrice)
+        (p) => parseFloat(p.tierAmount) >= parseFloat(postTier.minPrice)
     );
     if (eligible.length === 0) return { error: null };
 

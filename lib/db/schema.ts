@@ -50,23 +50,12 @@ export const tiers = pgTable("tiers", {
     .references(() => creators.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
-  priceAmount: text("price_amount").notNull(),
-  priceCurrency: text("price_currency").notNull().default("CKB"),
-  billingInterval: text("billing_interval").notNull().default("monthly"),
+  amount: text("amount").notNull(),
+  coverImageUrl: text("cover_image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const perks = pgTable("perks", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  tierId: uuid("tier_id")
-    .notNull()
-    .references(() => tiers.id, { onDelete: "cascade" }),
-  description: text("description").notNull(),
-  type: text("type"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
 
 export const posts = pgTable("posts", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -74,10 +63,7 @@ export const posts = pgTable("posts", {
     .notNull()
     .references(() => creators.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
-  body: text("body").notNull(),
-  minTierId: uuid("min_tier_id")
-    .notNull()
-    .references(() => tiers.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
   nostrEventId: text("nostr_event_id"),
   publishedAt: timestamp("published_at").notNull().defaultNow(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -227,10 +213,7 @@ export const postsRelations = relations(posts, ({ one }) => ({
     fields: [posts.creatorId],
     references: [creators.id],
   }),
-  minTier: one(tiers, {
-    fields: [posts.minTierId],
-    references: [tiers.id],
-  }),
+
 }));
 
 export const patronageRelations = relations(patronage, ({ one }) => ({
@@ -253,14 +236,10 @@ export const tiersRelations = relations(tiers, ({ one, many }) => ({
     fields: [tiers.creatorId],
     references: [creators.id],
   }),
-  perks: many(perks),
   patronage: many(patronage),
   posts: many(posts),
 }));
 
-export const perksRelations = relations(perks, ({ one }) => ({
-  tier: one(tiers, { fields: [perks.tierId], references: [tiers.id] }),
-}));
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -268,8 +247,6 @@ export type Creator = typeof creators.$inferSelect;
 export type NewCreator = typeof creators.$inferInsert;
 export type Tier = typeof tiers.$inferSelect;
 export type NewTier = typeof tiers.$inferInsert;
-export type Perk = typeof perks.$inferSelect;
-export type NewPerk = typeof perks.$inferInsert;
 export type Post = typeof posts.$inferSelect;
 export type NewPost = typeof posts.$inferInsert;
 export type Patronage = typeof patronage.$inferSelect;
