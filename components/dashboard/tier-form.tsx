@@ -20,9 +20,7 @@ import { createTier, updateTier } from "@/app/actions/tiers";
 const schema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
-  priceAmount: z.string().min(1, "Price is required").max(50),
-  priceCurrency: z.string().max(20).optional(),
-  billingInterval: z.string().max(20).optional(),
+  amount: z.string().min(1, "Amount is required").max(50),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -31,9 +29,7 @@ type TierForForm = {
   id: string;
   name: string;
   description: string;
-  priceAmount: string;
-  priceCurrency: string;
-  billingInterval: string;
+  amount: string;
 };
 
 export function TierForm({
@@ -51,16 +47,12 @@ export function TierForm({
       ? {
           name: tier.name,
           description: tier.description || "",
-          priceAmount: tier.priceAmount,
-          priceCurrency: tier.priceCurrency,
-          billingInterval: tier.billingInterval,
+          amount: tier.amount,
         }
       : {
           name: "",
           description: "",
-          priceAmount: "",
-          priceCurrency: "CKB",
-          billingInterval: "monthly",
+          amount: "",
         },
   });
 
@@ -69,9 +61,7 @@ export function TierForm({
     const formData = new FormData();
     formData.set("name", values.name.trim());
     if (values.description) formData.set("description", values.description.trim());
-    formData.set("priceAmount", values.priceAmount.trim());
-    formData.set("priceCurrency", values.priceCurrency?.trim() || "CKB");
-    formData.set("billingInterval", values.billingInterval?.trim() || "monthly");
+    formData.set("amount", values.amount.trim());
 
     const result = tier
       ? await updateTier(tier.id, {} as never, formData)
@@ -93,9 +83,7 @@ export function TierForm({
       form.reset({
         name: "",
         description: "",
-        priceAmount: "",
-        priceCurrency: "CKB",
-        billingInterval: "monthly",
+        amount: "",
       });
     }
     onSuccess?.();
@@ -133,38 +121,12 @@ export function TierForm({
         />
         <FormField
           control={form.control}
-          name="priceAmount"
+          name="amount"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Price amount</FormLabel>
+              <FormLabel>Amount (CKB)</FormLabel>
               <FormControl>
-                <Input placeholder="5.00" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="priceCurrency"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Currency</FormLabel>
-              <FormControl>
-                <Input placeholder="CKB" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="billingInterval"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Billing interval</FormLabel>
-              <FormControl>
-                <Input placeholder="monthly" {...field} />
+                <Input placeholder="5" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

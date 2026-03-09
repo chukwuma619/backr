@@ -60,8 +60,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const platformFeeAmount = calculatePlatformFee(tier.priceAmount);
-  const creatorAmount = calculateCreatorAmount(tier.priceAmount);
+  const platformFeeAmount = calculatePlatformFee(tier.amount);
+  const creatorAmount = calculateCreatorAmount(tier.amount);
   const hasPlatformFee =
     getPlatformFeePercent() > 0 &&
     parseFloat(platformFeeAmount) > 0 &&

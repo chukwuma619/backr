@@ -266,6 +266,16 @@ export type Creator = typeof creators.$inferSelect;
 export type NewCreator = typeof creators.$inferInsert;
 export type Tier = typeof tiers.$inferSelect;
 export type NewTier = typeof tiers.$inferInsert;
+/** @deprecated Perks table was removed in migration 0012. Use for type compatibility only. */
+export type Perk = {
+  id: string;
+  tierId: string;
+  description: string;
+  type: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type Post = typeof posts.$inferSelect;
 export type NewPost = typeof posts.$inferInsert;
 export type Patronage = typeof patronage.$inferSelect;

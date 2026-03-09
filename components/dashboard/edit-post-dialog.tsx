@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,8 +20,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { TiptapPostEditor } from "@/components/creator/tiptap-post-editor";
 import { updatePost, updatePostNostrEventId } from "@/app/actions/post";
 import { publishPostToNostr } from "@/lib/nostr/publish-post";
 import type { Post } from "@/lib/db/schema";
@@ -58,9 +58,16 @@ export function EditPostDialog({
     resolver: zodResolver(schema),
     defaultValues: {
       title: post.title,
-      body: post.body,
+      body: post.content,
     },
   });
+
+  useEffect(() => {
+    form.reset({
+      title: post.title,
+      body: post.content,
+    });
+  }, [post.id, post.title, post.content, form]);
 
   async function onSave(values: FormValues) {
     setError(null);
@@ -157,10 +164,10 @@ export function EditPostDialog({
                 <FormItem>
                   <FormLabel>Content</FormLabel>
                   <FormControl>
-                    <Textarea
+                    <TiptapPostEditor
+                      content={field.value}
+                      onChange={field.onChange}
                       placeholder="Content..."
-                      className="min-h-[120px]"
-                      {...field}
                     />
                   </FormControl>
                   <FormMessage />

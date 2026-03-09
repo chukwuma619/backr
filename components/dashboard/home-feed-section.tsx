@@ -70,7 +70,7 @@ export async function HomeFeedSection({ userId }: { userId: string }) {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground line-clamp-2">
-                  {post.body}
+                  {post.content}
                 </p>
               </CardContent>
             </Card>

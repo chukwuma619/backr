@@ -165,3 +165,20 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Tiptap editor placeholder */
+.tiptap p.is-editor-empty:first-child::before {
+  color: var(--color-muted-foreground);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.tiptap p.is-empty::before {
+  color: var(--color-muted-foreground);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

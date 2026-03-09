@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -65,8 +65,16 @@ export function CreatorRegistrationForm() {
     },
   });
 
-  const username = form.watch("username");
-  const selectedTopics = form.watch("topics");
+  const username = useWatch({
+    control: form.control,
+    name: "username",
+    defaultValue: "",
+  });
+  const selectedTopics = useWatch({
+    control: form.control,
+    name: "topics",
+    defaultValue: [],
+  });
 
   const checkUsername = useCallback(async (value: string) => {
     const trimmed = value.trim().toLowerCase();
@@ -250,7 +258,7 @@ export function CreatorRegistrationForm() {
                           onClick={() => toggleTopic(slug)}
                           className={cn(
                             "shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors border",
-                            selectedTopics.includes(slug)
+                            (selectedTopics ?? []).includes(slug)
                               ? "bg-primary text-primary-foreground border-primary"
                               : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border-transparent",
                           )}

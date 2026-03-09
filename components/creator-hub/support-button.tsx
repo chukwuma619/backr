@@ -92,7 +92,7 @@ export function SupportButton({ tier, creator }: SupportButtonProps) {
         <DialogHeader>
           <DialogTitle>Support {creator.displayName}</DialogTitle>
           <DialogDescription>
-            {tier.name} — {tier.priceAmount} {tier.priceCurrency} / {tier.billingInterval}
+            {tier.name} — {tier.amount} CKB
           </DialogDescription>
         </DialogHeader>
         {status === "success" ? (

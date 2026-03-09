@@ -126,9 +126,9 @@ export async function POST(request: NextRequest) {
       patronUserId: user.id,
       creatorId,
       tierId,
-      amount: tier.priceAmount,
-      currency: tier.priceCurrency,
-      billingInterval: tier.billingInterval,
+      amount: tier.amount,
+      currency: "CKB",
+      billingInterval: "monthly",
       fiberTxRef,
       platformFeeFiberTxRef,
     });

@@ -108,12 +108,12 @@ export async function createCreator(
     (CREATOR_CATEGORIES as readonly string[]).includes(s)
   );
 
-  const [updatedUser] = await db.update(users).set({
+  await db.update(users).set({
     userType: "creator",
     updatedAt: new Date(),
   }).where(eq(users.id, user.id)).returning({ id: users.id });
 
-  
+
   const [creator] = await db
     .insert(creators)
     .values({

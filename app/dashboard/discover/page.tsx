@@ -1,4 +1,4 @@
-import Link from "next/link";
+
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import {
@@ -15,7 +15,6 @@ import { DiscoverCreatorCard } from "@/components/discover/discover-creator-card
 import { DISCOVER_TOPICS } from "@/lib/discover/constants";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -39,7 +38,6 @@ export default async function DashboardDiscoverPage({
     searchResult,
     trendingResult,
     newResult,
-    categoryResult,
     recommendedResult,
   ] = await Promise.all([
     getAllCreatorsForDiscovery(q, topic ?? undefined),
@@ -52,7 +50,6 @@ export default async function DashboardDiscoverPage({
   const searchCreators = searchResult.data ?? [];
   const trendingCreators = trendingResult.data ?? [];
   const newCreators = newResult.data ?? [];
-  const categoryCreators = categoryResult.data ?? [];
   const recommendedCreators = recommendedResult.data ?? [];
 
   if (searchResult.error) {

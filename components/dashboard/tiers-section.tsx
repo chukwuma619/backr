@@ -27,36 +27,23 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { TierForm } from "./tier-form";
-import { PerkForm } from "./perk-form";
 import { deleteTier } from "@/app/actions/tiers";
-import { deletePerk } from "@/app/actions/perks";
-import type { Tier, Perk, Creator } from "@/lib/db/schema";
+import type { Tier } from "@/lib/db/schema";
 
 export function TiersSection({
-  creator,
-  tiersAndPerks,
+  tiers,
   onSuccess,
 }: {
-  creator: Creator;
-  tiersAndPerks: (Tier & { perks: Perk[] })[];
+  tiers: Tier[];
   onSuccess: () => void;
 }) {
   const [addTierOpen, setAddTierOpen] = useState(false);
   const [editingTierId, setEditingTierId] = useState<string | null>(null);
-  const [addPerkTierId, setAddPerkTierId] = useState<string | null>(null);
-  const [editingPerkId, setEditingPerkId] = useState<string | null>(null);
   const [deleteTierId, setDeleteTierId] = useState<string | null>(null);
-  const [deletePerkId, setDeletePerkId] = useState<string | null>(null);
 
   const handleDeleteTier = async (tierId: string) => {
     await deleteTier(tierId);
     setDeleteTierId(null);
-    onSuccess();
-  };
-
-  const handleDeletePerk = async (perkId: string) => {
-    await deletePerk(perkId);
-    setDeletePerkId(null);
     onSuccess();
   };
 
@@ -65,7 +52,7 @@ export function TiersSection({
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Tiers</CardTitle>
-          <CardDescription>Subscription tiers and perks.</CardDescription>
+          <CardDescription>Subscription tiers.</CardDescription>
         </div>
         <Dialog open={addTierOpen} onOpenChange={setAddTierOpen}>
           <DialogTrigger asChild>
@@ -85,10 +72,12 @@ export function TiersSection({
         </Dialog>
       </CardHeader>
       <CardContent className="space-y-6">
-        {tiersAndPerks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No tiers yet. Add one to get started.</p>
+        {tiers.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No tiers yet. Add one to get started.
+          </p>
         ) : (
-          tiersAndPerks.map((tier) => (
+          tiers.map((tier) => (
             <Card key={tier.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
@@ -98,13 +87,15 @@ export function TiersSection({
                       <CardDescription>{tier.description}</CardDescription>
                     )}
                     <p className="text-sm font-medium mt-1">
-                      {tier.priceAmount} {tier.priceCurrency} / {tier.billingInterval}
+                      {tier.amount} CKB
                     </p>
                   </div>
                   <div className="flex gap-2">
                     <Dialog
                       open={editingTierId === tier.id}
-                      onOpenChange={(open) => setEditingTierId(open ? tier.id : null)}
+                      onOpenChange={(open) =>
+                        setEditingTierId(open ? tier.id : null)
+                      }
                     >
                       <DialogTrigger asChild>
                         <Button variant="outline" size="sm">
@@ -120,9 +111,7 @@ export function TiersSection({
                             id: tier.id,
                             name: tier.name,
                             description: tier.description || "",
-                            priceAmount: tier.priceAmount,
-                            priceCurrency: tier.priceCurrency,
-                            billingInterval: tier.billingInterval,
+                            amount: tier.amount,
                           }}
                           onSuccess={() => {
                             setEditingTierId(null);
@@ -147,7 +136,7 @@ export function TiersSection({
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete tier?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will remove the tier and all its perks. This cannot be undone.
+                            This will remove the tier. This cannot be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -164,100 +153,6 @@ export function TiersSection({
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-sm font-medium mb-2">Perks</p>
-                {tier.perks.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No perks.</p>
-                ) : (
-                  <ul className="space-y-1 mb-3">
-                    {tier.perks.map((perk) => (
-                      <li key={perk.id} className="flex items-center justify-between text-sm">
-                        <span>{perk.description}</span>
-                        <div className="flex gap-1">
-                          <Dialog
-                            open={editingPerkId === perk.id}
-                            onOpenChange={(open) => setEditingPerkId(open ? perk.id : null)}
-                          >
-                            <DialogTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                Edit
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Edit perk</DialogTitle>
-                              </DialogHeader>
-                              <PerkForm
-                                perk={{
-                                  id: perk.id,
-                                  description: perk.description,
-                                  type: perk.type ?? "",
-                                }}
-                                onSuccess={() => {
-                                  setEditingPerkId(null);
-                                  onSuccess();
-                                }}
-                              />
-                            </DialogContent>
-                          </Dialog>
-                          <AlertDialog
-                            open={deletePerkId === perk.id}
-                            onOpenChange={(open) => !open && setDeletePerkId(null)}
-                          >
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive"
-                              onClick={() => setDeletePerkId(perk.id)}
-                            >
-                              Delete
-                            </Button>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete perk?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeletePerk(perk.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <Dialog
-                  open={addPerkTierId === tier.id}
-                  onOpenChange={(open) => setAddPerkTierId(open ? tier.id : null)}
-                >
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      Add perk
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add perk</DialogTitle>
-                    </DialogHeader>
-                    <PerkForm
-                      tierId={tier.id}
-                      onSuccess={() => {
-                        setAddPerkTierId(null);
-                        onSuccess();
-                      }}
-                    />
-                  </DialogContent>
-                </Dialog>
-              </CardContent>
             </Card>
           ))
         )}

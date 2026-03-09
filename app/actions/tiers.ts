@@ -12,9 +12,7 @@ import { getCreatorByUserId } from "@/lib/db/queries";
 const tierSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
-  priceAmount: z.string().min(1, "Price is required").max(50),
-  priceCurrency: z.string().max(20).optional(),
-  billingInterval: z.string().max(20).optional(),
+  amount: z.string().min(1, "Amount is required").max(50),
 });
 
 export type TierState = {
@@ -31,13 +29,12 @@ export async function createTier(
   if (!user) redirect("/");
 
   const { data: creator } = await getCreatorByUserId(user.id);
+  if (!creator) return { message: "Creator profile not found", success: false };
 
   const parsed = tierSchema.safeParse({
     name: formData.get("name"),
     description: formData.get("description") || undefined,
-    priceAmount: formData.get("priceAmount"),
-    priceCurrency: formData.get("priceCurrency") || "CKB",
-    billingInterval: formData.get("billingInterval") || "monthly",
+    amount: formData.get("amount") ?? formData.get("priceAmount"),
   });
 
   if (!parsed.success) {
@@ -47,16 +44,13 @@ export async function createTier(
     };
   }
 
-  const { name, description, priceAmount, priceCurrency, billingInterval } =
-    parsed.data;
+  const { name, description, amount } = parsed.data;
 
   await db.insert(tiers).values({
     creatorId: creator.id,
     name: name.trim(),
     description: description?.trim() ?? null,
-    priceAmount: priceAmount.trim(),
-    priceCurrency: priceCurrency?.trim() ?? "CKB",
-    billingInterval: billingInterval?.trim() ?? "monthly",
+    amount: amount.trim(),
   });
 
   revalidatePath("/dashboard");
@@ -79,16 +73,14 @@ export async function updateTier(
     .where(eq(tiers.id, tierId))
     .limit(1);
 
-  if (!tier || tier.creatorId !== creator.id) {
+  if (!creator || !tier || tier.creatorId !== creator.id) {
     return { message: "Tier not found", success: false };
   }
 
   const parsed = tierSchema.safeParse({
     name: formData.get("name"),
     description: formData.get("description") || undefined,
-    priceAmount: formData.get("priceAmount"),
-    priceCurrency: formData.get("priceCurrency") || "CKB",
-    billingInterval: formData.get("billingInterval") || "monthly",
+    amount: formData.get("amount") ?? formData.get("priceAmount"),
   });
 
   if (!parsed.success) {
@@ -98,17 +90,14 @@ export async function updateTier(
     };
   }
 
-  const { name, description, priceAmount, priceCurrency, billingInterval } =
-    parsed.data;
+  const { name, description, amount } = parsed.data;
 
   await db
     .update(tiers)
     .set({
       name: name.trim(),
       description: description?.trim() ?? null,
-      priceAmount: priceAmount.trim(),
-      priceCurrency: priceCurrency?.trim() ?? "CKB",
-      billingInterval: billingInterval?.trim() ?? "monthly",
+      amount: amount.trim(),
       updatedAt: new Date(),
     })
     .where(eq(tiers.id, tierId));

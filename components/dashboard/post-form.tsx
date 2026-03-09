@@ -202,7 +202,7 @@ export function PostForm({
                     <SelectContent>
                       {tiers.map((tier) => (
                         <SelectItem key={tier.id} value={tier.id}>
-                          {tier.name} ({tier.priceAmount} {tier.priceCurrency})
+                          {tier.name} ({tier.amount} CKB)
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -9,7 +9,7 @@ import { posts } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import {
   getCreatorByUserId,
-  getTiersAndPerksByCreatorId,
+  getTiersByCreatorId,
   createNotificationsForNewPost,
 } from "@/lib/db/queries";
 
@@ -36,8 +36,8 @@ export async function createPost(
   const { data: creator } = await getCreatorByUserId(user.id);
   if (!creator) return { message: "Creator profile not found", success: false };
 
-  const { data: tiersAndPerks } = await getTiersAndPerksByCreatorId(creator.id);
-  const tierIds = tiersAndPerks?.map((t) => t.id) ?? [];
+  const { data: creatorTiers } = await getTiersByCreatorId(creator.id);
+  const tierIds = creatorTiers?.map((t) => t.id) ?? [];
   if (tierIds.length === 0) {
     return { message: "Create at least one tier first", success: false };
   }
@@ -71,8 +71,7 @@ export async function createPost(
     .values({
       creatorId: creator.id,
       title: parsed.data.title,
-      body: parsed.data.body,
-      minTierId: parsed.data.minTierId,
+      content: parsed.data.body,
     })
     .returning({ id: posts.id });
 
@@ -86,6 +85,7 @@ export async function createPost(
 
   revalidatePath("/dashboard");
   revalidatePath("/feed");
+  revalidatePath("/creator/post");
   return { success: true, postId: inserted?.id };
 }
 
@@ -134,13 +134,14 @@ export async function updatePost(
     .update(posts)
     .set({
       title: parsed.data.title,
-      body: parsed.data.body,
+      content: parsed.data.body,
       updatedAt: new Date(),
     })
     .where(eq(posts.id, postId));
 
   revalidatePath("/dashboard");
   revalidatePath("/feed");
+  revalidatePath("/creator/post");
   return { success: true };
 }
 
@@ -171,5 +172,6 @@ export async function updatePostNostrEventId(
 
   revalidatePath("/dashboard");
   revalidatePath("/feed");
+  revalidatePath("/creator/post");
   return { success: true };
 }

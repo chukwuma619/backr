@@ -34,7 +34,7 @@ export function PostListItem({ post, creator }: { post: Post; creator: Creator }
         </Button>
       </div>
       <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-        {post.body}
+        {post.content}
       </p>
       <p className="text-xs text-muted-foreground mt-2">
         {format(new Date(post.publishedAt), "MMM d, yyyy")}

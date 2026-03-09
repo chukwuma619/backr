@@ -47,7 +47,8 @@ export async function GET(request: NextRequest) {
     process.env.PLATFORM_FIBER_RPC_URL?.trim();
 
   for (const row of duePatronages ?? []) {
-    const { patronage, creatorFiberNodeRpcUrl, patronFiberNodeRpcUrl, tierPrice, tierBillingInterval } = row;
+    const { patronage, creatorFiberNodeRpcUrl, patronFiberNodeRpcUrl, tierAmount } = row;
+    const tierPrice = tierAmount;
 
     if (!creatorFiberNodeRpcUrl) {
       results.push({
@@ -139,7 +140,7 @@ export async function GET(request: NextRequest) {
       const { error: updateError } = await updatePatronageAfterRenewal(
         patronage.id,
         fiberTxRef,
-        tierBillingInterval ?? "monthly",
+        "monthly",
         platformFeeFiberTxRef
       );
 
