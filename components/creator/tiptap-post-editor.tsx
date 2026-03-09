@@ -20,22 +20,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-function EditorToolbar({ editor }: { editor: Editor | null }) {
-  if (!editor) return null;
-
-  const ToolbarButton = ({
-    onClick,
-    isActive,
-    disabled,
-    "aria-label": ariaLabel,
-    children,
-  }: {
-    onClick: () => void;
-    isActive?: boolean;
-    disabled?: boolean;
-    "aria-label": string;
-    children: React.ReactNode;
-  }) => (
+function ToolbarButton({
+  onClick,
+  isActive,
+  disabled,
+  "aria-label": ariaLabel,
+  children,
+}: {
+  onClick: () => void;
+  isActive?: boolean;
+  disabled?: boolean;
+  "aria-label": string;
+  children: React.ReactNode;
+}) {
+  return (
     <Button
       type="button"
       variant="ghost"
@@ -51,6 +49,10 @@ function EditorToolbar({ editor }: { editor: Editor | null }) {
       {children}
     </Button>
   );
+}
+
+function EditorToolbar({ editor }: { editor: Editor | null }) {
+  if (!editor) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-0.5 border-b border-border bg-muted/30 px-2 py-1.5">
@@ -154,6 +156,7 @@ export function TiptapPostEditor({
   className,
 }: TiptapPostEditorProps) {
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Placeholder.configure({

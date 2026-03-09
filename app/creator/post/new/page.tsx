@@ -15,24 +15,8 @@ export default async function CreatorPostNewPage() {
   const { data: tiers } = await getTiersByCreatorId(creator.id);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/creator/post">
-            <ChevronLeft className="size-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Create post
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Share an update with your supporters.
-          </p>
-        </div>
-      </div>
 
       <PostCreateForm creator={creator} tiers={tiers ?? []} />
-    </div>
+
   );
 }

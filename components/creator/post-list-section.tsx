@@ -56,12 +56,7 @@ function PostListItem({ post }: { post: Post }) {
 export function PostListSection({ posts }: PostListSectionProps) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Your posts</CardTitle>
-        <CardDescription>
-          Exclusive content for your patrons, ordered by publish date.
-        </CardDescription>
-      </CardHeader>
+
       <CardContent>
         {posts && posts.length > 0 ? (
           <ul>

@@ -131,166 +131,144 @@ export function PostCreateForm({ creator, tiers }: PostCreateFormProps) {
     }
   }
 
-  if (tiers.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Create post</CardTitle>
-          <CardDescription>
-            Create at least one tier before publishing posts.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
+
 
   return (
-    <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
-      <div className="flex-1 min-w-0">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="size-5" />
-              Create post
-            </CardTitle>
-            <CardDescription>
-              Share an update, describe your creation, or write something for
-              your supporters.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-6"
-              >
-                {error && (
-                  <p className="text-sm text-destructive">{error}</p>
-                )}
+    <Form {...form} >
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex flex-col gap-6 lg:flex-row lg:gap-8 h-full"
+      >
+        <div className="flex-1 min-w-0">
+          <Card>
 
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Add a title to your post"
-                          className="text-lg font-medium"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="body"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Content</FormLabel>
-                      <FormControl>
-                        <TiptapPostEditor
-                          content={field.value}
-                          onChange={field.onChange}
-                          placeholder="Share an update, describe your creation, or write something for your supporters…"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex flex-wrap items-center gap-4 pt-4">
-                  <Button
-                    type="submit"
-                    disabled={
-                      form.formState.isSubmitting ||
-                      nostrStatus === "pending" ||
-                      !creator.nostrPubkey
-                    }
-                  >
-                    {form.formState.isSubmitting
-                      ? "Saving…"
-                      : nostrStatus === "pending"
-                        ? "Publishing to Nostr…"
-                        : nostrStatus === "success"
-                          ? "Published"
-                          : "Publish"}
-                  </Button>
-                  {nostrError && (
-                    <p className="text-sm text-destructive">{nostrError}</p>
-                  )}
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-      </div>
-
-      <aside className="w-full lg:w-80 shrink-0">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Post settings</CardTitle>
-            <CardDescription>
-              Control who can see your post and when it goes live.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <FormField
-              control={form.control}
-              name="minTierId"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center gap-2">
-                    <Users className="size-4 text-muted-foreground" />
-                    <FormLabel>Audience</FormLabel>
-                  </div>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select tier" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {tiers.map((tier) => (
-                        <SelectItem key={tier.id} value={tier.id}>
-                          {tier.name} ({tier.amount} CKB)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription className="text-xs">
-                    Minimum tier required to view this post
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
+            <CardContent className="space-y-6">
+              {error && (
+                <p className="text-sm text-destructive">{error}</p>
               )}
-            />
 
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Send className="size-4 text-muted-foreground" />
-                <Label htmlFor="notify-members">Notify members</Label>
-              </div>
-              <Switch
-                id="notify-members"
-                checked={notifyMembers}
-                onCheckedChange={setNotifyMembers}
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Add a title to your post"
+                        className="text-lg font-medium"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Send email and push notifications when you publish
-            </p>
-          </CardContent>
-        </Card>
-      </aside>
-    </div>
+
+              <FormField
+                control={form.control}
+                name="body"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Content</FormLabel>
+                    <FormControl>
+                      <TiptapPostEditor
+                        content={field.value}
+                        onChange={field.onChange}
+                        placeholder="Share an update, describe your creation, or write something for your supporters…"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex flex-wrap items-center gap-4 pt-4">
+                <Button
+                  type="submit"
+                  disabled={
+                    form.formState.isSubmitting ||
+                    nostrStatus === "pending" ||
+                    !creator.nostrPubkey
+                  }
+                >
+                  {form.formState.isSubmitting
+                    ? "Saving…"
+                    : nostrStatus === "pending"
+                      ? "Publishing to Nostr…"
+                      : nostrStatus === "success"
+                        ? "Published"
+                        : "Publish"}
+                </Button>
+                {nostrError && (
+                  <p className="text-sm text-destructive">{nostrError}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <aside className="w-full lg:w-80 shrink-0">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Post settings</CardTitle>
+              <CardDescription>
+                Control who can see your post and when it goes live.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <FormField
+                control={form.control}
+                name="minTierId"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center gap-2">
+                      <Users className="size-4 text-muted-foreground" />
+                      <FormLabel>Audience</FormLabel>
+                    </div>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select tier" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {tiers.map((tier) => (
+                          <SelectItem key={tier.id} value={tier.id}>
+                            {tier.name} ({tier.amount} CKB)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-xs">
+                      Minimum tier required to view this post
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Send className="size-4 text-muted-foreground" />
+                  <Label htmlFor="notify-members">Notify members</Label>
+                </div>
+                <Switch
+                  id="notify-members"
+                  checked={notifyMembers}
+                  onCheckedChange={setNotifyMembers}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Send email and push notifications when you publish
+              </p>
+            </CardContent>
+          </Card>
+        </aside>
+      </form>
+    </Form>
   );
 }
