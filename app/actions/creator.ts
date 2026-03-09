@@ -108,6 +108,12 @@ export async function createCreator(
     (CREATOR_CATEGORIES as readonly string[]).includes(s)
   );
 
+  const [updatedUser] = await db.update(users).set({
+    userType: "creator",
+    updatedAt: new Date(),
+  }).where(eq(users.id, user.id)).returning({ id: users.id });
+
+  
   const [creator] = await db
     .insert(creators)
     .values({
@@ -129,8 +135,8 @@ export async function createCreator(
     );
   }
 
-  revalidatePath("/dashboard");
-  redirect("/dashboard");
+  revalidatePath("/creator");
+  redirect("/creator");
 }
 
 export async function updateCreator(
@@ -226,7 +232,7 @@ export async function updateCreator(
     })
     .where(eq(users.id, creator.userId));
 
-  revalidatePath("/dashboard");
+  revalidatePath("/creator");
   return { success: true };
 }
 
@@ -249,6 +255,6 @@ export async function updateCreatorNostrPubkey(
     .set({ nostrPubkey: hex, updatedAt: new Date() })
     .where(eq(users.id, creator.userId));
 
-  revalidatePath("/dashboard");
+  revalidatePath("/creator");
   return { success: true };
 }
