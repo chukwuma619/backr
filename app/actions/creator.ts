@@ -5,10 +5,20 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { creators, users } from "@/lib/db/schema";
+import {
+  CREATOR_CATEGORIES,
+  creators,
+  creatortopics,
+  users,
+} from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { getCreatorByUserId } from "@/lib/db/queries";
 import { validateSlug } from "@/lib/creators/slug";
+import { DISCOVER_TOPICS } from "@/lib/discover/constants";
+
+const DISCOVER_TOPICS_MAP = Object.fromEntries(
+  DISCOVER_TOPICS.map((t) => [t.slug, t.label])
+) as Record<string, string>;
 
 const createSchema = z.object({
   slug: z
@@ -24,12 +34,14 @@ const createSchema = z.object({
     .min(1, "Display name is required")
     .max(200, "Display name must be at most 200 characters"),
   bio: z.string().max(1000).optional(),
-  category: z.string().optional(),
+  topics: z.array(z.string()).min(1, "Select at least one topic"),
   avatarUrl: z.string().max(500).optional(),
   fiberNodeRpcUrl: z.union([z.string().url(), z.literal("")]).optional(),
 });
 
-const updateSchema = createSchema;
+const updateSchema = createSchema.extend({
+  topics: z.array(z.string()).min(1, "Select at least one topic").optional(),
+});
 
 export type CreateCreatorState = {
   errors?: Record<string, string[]>;
@@ -51,11 +63,16 @@ export async function createCreator(
     return { message: "You already have a creator profile", success: false };
   }
 
+  const topicsRaw = formData.get("topics");
+  const topics = topicsRaw
+    ? (JSON.parse(topicsRaw as string) as string[])
+    : undefined;
+
   const raw = {
     slug: formData.get("slug") as string,
     displayName: formData.get("displayName") as string,
     bio: (formData.get("bio") as string) || undefined,
-    category: (formData.get("category") as string) || undefined,
+    topics,
     avatarUrl: (formData.get("avatarUrl") as string) || undefined,
   };
 
@@ -84,16 +101,33 @@ export async function createCreator(
     .limit(1);
 
   if (existingSlug) {
-    return { errors: { slug: ["This slug is already taken"] }, success: false };
+    return { errors: { slug: ["This username is already taken"] }, success: false };
   }
 
-  await db.insert(creators).values({
-    userId: user.id,
-    username: slugResult.slug,
-    displayName: parsed.data.displayName,
-    bio: parsed.data.bio ?? null,
-    category: parsed.data.category ?? null,
-  });
+  const validTopics = (parsed.data.topics ?? []).filter((s) =>
+    (CREATOR_CATEGORIES as readonly string[]).includes(s)
+  );
+
+  const [creator] = await db
+    .insert(creators)
+    .values({
+      userId: user.id,
+      username: slugResult.slug,
+      displayName: parsed.data.displayName,
+      bio: parsed.data.bio ?? null,
+    })
+    .returning({ id: creators.id });
+
+  if (creator && validTopics.length > 0) {
+    const topicLabels = DISCOVER_TOPICS_MAP;
+    await db.insert(creatortopics).values(
+      validTopics.map((slug) => ({
+        creatorId: creator.id,
+        slug,
+        label: topicLabels[slug] ?? slug,
+      }))
+    );
+  }
 
   revalidatePath("/dashboard");
   redirect("/dashboard");
@@ -113,11 +147,16 @@ export async function updateCreator(
     return { message: "Creator profile not found", success: false };
   }
 
+  const topicsRaw = formData.get("topics");
+  const topics = topicsRaw
+    ? (JSON.parse(topicsRaw as string) as string[])
+    : undefined;
+
   const raw = {
     slug: formData.get("slug") as string,
     displayName: formData.get("displayName") as string,
     bio: (formData.get("bio") as string) || undefined,
-    category: (formData.get("category") as string) || undefined,
+    topics,
     avatarUrl: (formData.get("avatarUrl") as string) || undefined,
     fiberNodeRpcUrl: (formData.get("fiberNodeRpcUrl") as string) || undefined,
   };
@@ -158,10 +197,25 @@ export async function updateCreator(
       username: slugResult.slug,
       displayName: parsed.data.displayName,
       bio: parsed.data.bio ?? null,
-      category: parsed.data.category ?? null,
       updatedAt: new Date(),
     })
     .where(eq(creators.id, creator.id));
+
+  if (parsed.data.topics !== undefined) {
+    const validTopics = parsed.data.topics.filter((s) =>
+      (CREATOR_CATEGORIES as readonly string[]).includes(s)
+    );
+    await db.delete(creatortopics).where(eq(creatortopics.creatorId, creator.id));
+    if (validTopics.length > 0) {
+      await db.insert(creatortopics).values(
+        validTopics.map((slug) => ({
+          creatorId: creator.id,
+          slug,
+          label: DISCOVER_TOPICS_MAP[slug] ?? slug,
+        }))
+      );
+    }
+  }
 
   await db
     .update(users)

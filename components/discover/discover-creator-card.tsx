@@ -9,22 +9,16 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import type { Creator } from "@/lib/db/schema";
-import { DISCOVER_TOPICS } from "@/lib/discover/constants";
-
-function getCategoryLabel(category: string | null): string | null {
-  if (!category) return null;
-  const topic = DISCOVER_TOPICS.find((t) => t.slug === category);
-  return topic?.label ?? null;
-}
 
 export function DiscoverCreatorCard({
   creator,
   variant = "carousel",
+  topicLabel,
 }: {
   creator: Creator;
   variant?: "carousel" | "grid";
+  topicLabel?: string | null;
 }) {
-  const categoryLabel = getCategoryLabel(creator.category);
 
   return (
     <Link href={`/c/${creator.username}`}>
@@ -48,9 +42,9 @@ export function DiscoverCreatorCard({
               <CardDescription className="truncate">
                 @{creator.username}
               </CardDescription>
-              {categoryLabel && (
+              {topicLabel && (
                 <span className="text-xs text-muted-foreground/80 mt-0.5 block">
-                  {categoryLabel}
+                  {topicLabel}
                 </span>
               )}
             </div>

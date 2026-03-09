@@ -104,6 +104,7 @@ export default async function DashboardDiscoverPage({
                   key={creator.id}
                   creator={creator}
                   variant="grid"
+                  topicLabel={topicLabel ?? undefined}
                 />
               ))}
             </div>

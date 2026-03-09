@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
@@ -38,10 +38,24 @@ export const creators = pgTable("creators", {
   username: text("username").notNull().unique(),
   displayName: text("display_name").notNull(),
   bio: text("bio"),
-  category: text("category"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const creatortopics = pgTable(
+  "creator_topics",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    creatorId: uuid("creator_id")
+      .notNull()
+      .references(() => creators.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    slug: text("slug").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.creatorId, t.slug)]
+);
 
 export const tiers = pgTable("tiers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -55,7 +69,6 @@ export const tiers = pgTable("tiers", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
-
 
 export const posts = pgTable("posts", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -156,11 +169,19 @@ export const usersRelations = relations(users, ({ one, many }) => ({
 
 export const creatorsRelations = relations(creators, ({ one, many }) => ({
   user: one(users, { fields: [creators.userId], references: [users.id] }),
+  topics: many(creatortopics),
   tiers: many(tiers),
   patronage: many(patronage),
   posts: many(posts),
   chats: many(chats),
   notifications: many(notifications),
+}));
+
+export const creatortopicsRelations = relations(creatortopics, ({ one }) => ({
+  creator: one(creators, {
+    fields: [creatortopics.creatorId],
+    references: [creators.id],
+  }),
 }));
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
@@ -194,7 +215,7 @@ export const chatParticipantsRelations = relations(
       fields: [chatParticipants.userId],
       references: [users.id],
     }),
-  })
+  }),
 );
 
 export const messagesRelations = relations(messages, ({ one }) => ({
@@ -213,7 +234,6 @@ export const postsRelations = relations(posts, ({ one }) => ({
     fields: [posts.creatorId],
     references: [creators.id],
   }),
-
 }));
 
 export const patronageRelations = relations(patronage, ({ one }) => ({
@@ -239,7 +259,6 @@ export const tiersRelations = relations(tiers, ({ one, many }) => ({
   patronage: many(patronage),
   posts: many(posts),
 }));
-
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;

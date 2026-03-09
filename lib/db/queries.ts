@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { calculatePlatformFee } from "@/lib/platform-fee";
 import {
   creators,
+  creatortopics,
   tiers,
   patronage,
   users,
@@ -41,19 +42,42 @@ export async function getAllCreatorsForDiscovery(
 ) {
   try {
     const term = search?.trim() ? `%${search.trim()}%` : null;
-    const conditions = [];
-    if (term) {
-      conditions.push(
-        or(
-          ilike(creators.displayName, term),
-          ilike(creators.username, term),
-          ilike(creators.bio, term)
-        )!
-      );
+    const topicSlug = category?.trim();
+
+    if (topicSlug) {
+      const searchConditions = term
+        ? and(
+            eq(creatortopics.slug, topicSlug),
+            or(
+              ilike(creators.displayName, term),
+              ilike(creators.username, term),
+              ilike(creators.bio, term)
+            )!
+          )
+        : eq(creatortopics.slug, topicSlug);
+
+      const rows = await db
+        .selectDistinct({ creator: creators })
+        .from(creators)
+        .innerJoin(creatortopics, eq(creatortopics.creatorId, creators.id))
+        .where(searchConditions)
+        .orderBy(desc(creators.createdAt));
+
+      return {
+        data: rows.map((r) => r.creator),
+        error: null,
+      };
     }
-    if (category?.trim()) {
-      conditions.push(eq(creators.category, category.trim()));
-    }
+
+    const conditions = term
+      ? [
+          or(
+            ilike(creators.displayName, term),
+            ilike(creators.username, term),
+            ilike(creators.bio, term)
+          )!,
+        ]
+      : [];
     const rows = await db
       .select()
       .from(creators)
@@ -107,12 +131,16 @@ export async function getCreatorsByCategory(
 ) {
   try {
     const rows = await db
-      .select()
+      .selectDistinct({ creator: creators })
       .from(creators)
-      .where(eq(creators.category, category))
+      .innerJoin(creatortopics, eq(creatortopics.creatorId, creators.id))
+      .where(eq(creatortopics.slug, category.trim()))
       .orderBy(desc(creators.createdAt))
       .limit(limit);
-    return { data: rows, error: null };
+    return {
+      data: rows.map((r) => r.creator),
+      error: null,
+    };
   } catch (error) {
     console.error(error);
     return { data: [], error: error as Error };
