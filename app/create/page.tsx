@@ -17,7 +17,7 @@ export default async function CreatePage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-xl space-y-6">
-        <CreatorRegistrationForm />
+        <CreatorRegistrationForm userId={user.id} />
       </div>
     </div>
   );

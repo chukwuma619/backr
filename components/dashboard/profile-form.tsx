@@ -2,17 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -135,63 +133,83 @@ export function ProfileForm({
         <CardDescription>Edit your public creator profile.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <FormField
+        <form
+          id="profile-form"
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-6"
+        >
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <FieldGroup>
+            <Controller
               control={form.control}
               name="slug"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Slug</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="profile-form-slug">Slug</FieldLabel>
+                  <Input
+                    id="profile-form-slug"
+                    {...field}
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-            <FormField
+            <Controller
               control={form.control}
               name="displayName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Display name</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="profile-form-displayName">
+                    Display name
+                  </FieldLabel>
+                  <Input
+                    id="profile-form-displayName"
+                    {...field}
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-            <FormField
+            <Controller
               control={form.control}
               name="bio"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bio (optional)</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="profile-form-bio">
+                    Bio (optional)
+                  </FieldLabel>
+                  <Textarea
+                    id="profile-form-bio"
+                    {...field}
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-            <FormField
+            <Controller
               control={form.control}
               name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category (optional)</FormLabel>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="profile-form-category">
+                    Category (optional)
+                  </FieldLabel>
                   <Select
                     onValueChange={field.onChange}
                     value={field.value || ""}
                   >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
+                    <SelectTrigger id="profile-form-category" className="w-full">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">None</SelectItem>
                       {DISCOVER_TOPICS.map(({ slug, label }) => (
@@ -201,73 +219,88 @@ export function ProfileForm({
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-            <FormField
+            <Controller
               control={form.control}
               name="avatarUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Avatar URL (optional)</FormLabel>
-                  <FormControl>
-                    <Input type="url" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="profile-form-avatarUrl">
+                    Avatar URL (optional)
+                  </FieldLabel>
+                  <Input
+                    id="profile-form-avatarUrl"
+                    type="url"
+                    {...field}
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-            <FormField
+            <Controller
               control={form.control}
               name="fiberNodeRpcUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fiber node RPC URL (optional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="url"
-                      placeholder="http://localhost:8227"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="profile-form-fiberNodeRpcUrl">
+                    Fiber node RPC URL (optional)
+                  </FieldLabel>
+                  <Input
+                    id="profile-form-fiberNodeRpcUrl"
+                    type="url"
+                    placeholder="http://localhost:8227"
+                    {...field}
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-            <div className="flex items-center gap-4">
-              <div>
-                <p className="text-sm font-medium mb-1">Nostr (for publishing posts)</p>
-                <p className="text-xs text-muted-foreground mb-2">
-                  {data.nostrPubkey
-                    ? `Connected: ${data.nostrPubkey.slice(0, 12)}…${data.nostrPubkey.slice(-6)}`
-                    : "Connect a Nostr extension (e.g. nos2x) to publish posts."}
-                </p>
-                <Button
-                  type="button"
-                  variant={data.nostrPubkey ? "outline" : "default"}
-                  size="sm"
-                  onClick={handleConnectNostr}
-                  disabled={nostrStatus === "pending"}
-                >
-                  {nostrStatus === "pending"
-                    ? "Connecting…"
-                    : nostrStatus === "success"
-                      ? "Connected"
-                      : data.nostrPubkey
-                        ? "Reconnect"
-                        : "Connect Nostr"}
-                </Button>
-                {nostrError && (
-                  <p className="text-sm text-destructive mt-2">{nostrError}</p>
-                )}
-              </div>
-            </div>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? "Saving…" : "Save"}
-            </Button>
-          </form>
-        </Form>
+            <Field>
+              <p className="text-sm font-medium mb-1">
+                Nostr (for publishing posts)
+              </p>
+              <p className="text-xs text-muted-foreground mb-2">
+                {data.nostrPubkey
+                  ? `Connected: ${data.nostrPubkey.slice(0, 12)}…${data.nostrPubkey.slice(-6)}`
+                  : "Connect a Nostr extension (e.g. nos2x) to publish posts."}
+              </p>
+              <Button
+                type="button"
+                variant={data.nostrPubkey ? "outline" : "default"}
+                size="sm"
+                onClick={handleConnectNostr}
+                disabled={nostrStatus === "pending"}
+              >
+                {nostrStatus === "pending"
+                  ? "Connecting…"
+                  : nostrStatus === "success"
+                    ? "Connected"
+                    : data.nostrPubkey
+                      ? "Reconnect"
+                      : "Connect Nostr"}
+              </Button>
+              {nostrError && (
+                <p className="text-sm text-destructive mt-2">{nostrError}</p>
+              )}
+            </Field>
+            <Field>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "Saving…" : "Save"}
+              </Button>
+            </Field>
+          </FieldGroup>
+        </form>
       </CardContent>
     </Card>
   );

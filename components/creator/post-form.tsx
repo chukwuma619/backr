@@ -1,33 +1,17 @@
 "use client";
 
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { TiptapPostEditor } from "@/components/creator/tiptap-post-editor";
 
 import type { Post } from "@/lib/db/schema";
@@ -58,7 +42,7 @@ export function PostForm({ post }: PostFormProps) {
         }
   });
 
-  const status = useWatch({ control: form.control, name: "status" });
+  useWatch({ control: form.control, name: "status" });
 
 
 
@@ -84,69 +68,51 @@ export function PostForm({ post }: PostFormProps) {
   }
 
   return (
-    <Form {...form}>
       <form
+      id="post-form"
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-6"
       >
-        <Card>
-          <CardContent className="space-y-6 pt-6">
-            <FormField
+           <FieldGroup>
+            <Controller
               control={form.control}
               name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="post-form-title">Title</FieldLabel>
                     <Input
                       placeholder="Post title"
+                      id="post-form-title"
                       className="text-lg font-medium"
                       {...field}
+                      aria-invalid={fieldState.invalid}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                     {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-            <FormField
+            <Controller
               control={form.control}
               name="body"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Content</FormLabel>
-                  <FormControl>
-                    <TiptapPostEditor
-                      content={field.value}
-                      onChange={field.onChange}
-                      placeholder="Content..."
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="post-form-body">Content</FieldLabel>
+                  <TiptapPostEditor
+                    id="post-form-body"
+                    content={field.value}
+                    onChange={field.onChange}
+                    placeholder="Content..."
+                  />
+                   {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="w-40">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="published">Published</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="flex flex-wrap items-center gap-4 pt-4">
+           
+            <Field >
               <Button
                 type="submit"
                 disabled={form.formState.isSubmitting}
@@ -155,10 +121,8 @@ export function PostForm({ post }: PostFormProps) {
                   ? "Saving…"
                   : "Save"}
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </Field>
+            </FieldGroup>
       </form>
-    </Form>
   );
 }

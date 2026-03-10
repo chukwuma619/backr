@@ -11,13 +11,12 @@ import {
   creatortopics,
   users,
 } from "@/lib/db/schema";
-import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { getCreatorByUserId } from "@/lib/db/queries";
+
 import { validateSlug } from "@/lib/creators/slug";
 import { DISCOVER_TOPICS } from "@/lib/discover/constants";
 
 const DISCOVER_TOPICS_MAP = Object.fromEntries(
-  DISCOVER_TOPICS.map((t) => [t.slug, t.label])
+  DISCOVER_TOPICS.map((t) => [t.slug, t.label]),
 ) as Record<string, string>;
 
 const createSchema = z.object({
@@ -27,7 +26,7 @@ const createSchema = z.object({
     .max(64, "Slug must be at most 64 characters")
     .regex(
       /^[a-z0-9-_]+$/,
-      "Slug can only contain lowercase letters, numbers, hyphens, and underscores"
+      "Slug can only contain lowercase letters, numbers, hyphens, and underscores",
     ),
   displayName: z
     .string()
@@ -50,19 +49,10 @@ export type CreateCreatorState = {
 };
 
 export async function createCreator(
-  _prevState: CreateCreatorState,
-  formData: FormData
+  userId: string,
+  creatorId: string,
+  formData: FormData,
 ): Promise<CreateCreatorState> {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/");
-  }
-
-  const existing = await getCreatorByUserId(user.id);
-  if (existing.data) {
-    return { message: "You already have a creator profile", success: false };
-  }
-
   const topicsRaw = formData.get("topics");
   const topics = topicsRaw
     ? (JSON.parse(topicsRaw as string) as string[])
@@ -94,30 +84,23 @@ export async function createCreator(
     return { errors: { slug: [slugResult.error] }, success: false };
   }
 
-  const [existingSlug] = await db
-    .select({ id: creators.id })
-    .from(creators)
-    .where(eq(creators.username, slugResult.slug))
-    .limit(1);
-
-  if (existingSlug) {
-    return { errors: { slug: ["This username is already taken"] }, success: false };
-  }
-
   const validTopics = (parsed.data.topics ?? []).filter((s) =>
-    (CREATOR_CATEGORIES as readonly string[]).includes(s)
+    (CREATOR_CATEGORIES as readonly string[]).includes(s),
   );
 
-  await db.update(users).set({
-    userType: "creator",
-    updatedAt: new Date(),
-  }).where(eq(users.id, user.id)).returning({ id: users.id });
-
+  await db
+    .update(users)
+    .set({
+      userType: "creator",
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId))
+    .returning({ id: users.id });
 
   const [creator] = await db
     .insert(creators)
     .values({
-      userId: user.id,
+      userId: userId,
       username: slugResult.slug,
       displayName: parsed.data.displayName,
       bio: parsed.data.bio ?? null,
@@ -131,7 +114,7 @@ export async function createCreator(
         creatorId: creator.id,
         slug,
         label: topicLabels[slug] ?? slug,
-      }))
+      })),
     );
   }
 
@@ -140,19 +123,10 @@ export async function createCreator(
 }
 
 export async function updateCreator(
-  _prevState: CreateCreatorState,
-  formData: FormData
-): Promise<CreateCreatorState> {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/");
-  }
-
-  const { data: creator } = await getCreatorByUserId(user.id);
-  if (!creator) {
-    return { message: "Creator profile not found", success: false };
-  }
-
+  userId: string,
+  creatorId: string,
+  formData: FormData,
+) {
   const topicsRaw = formData.get("topics");
   const topics = topicsRaw
     ? (JSON.parse(topicsRaw as string) as string[])
@@ -186,75 +160,71 @@ export async function updateCreator(
     return { errors: { slug: [slugResult.error] }, success: false };
   }
 
-  if (slugResult.slug !== creator.username) {
-    const [existingSlug] = await db
-      .select({ id: creators.id })
-      .from(creators)
-      .where(eq(creators.username, slugResult.slug))
-      .limit(1);
-    if (existingSlug) {
-      return { errors: { slug: ["This slug is already taken"] }, success: false };
-    }
-  }
+  try {
+    const [creator] = await db
+      .update(creators)
+      .set({
+        username: slugResult.slug,
+        displayName: parsed.data.displayName,
+        bio: parsed.data.bio ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(creators.id, creatorId))
+      .returning({ id: creators.id });
 
-  await db
-    .update(creators)
-    .set({
-      username: slugResult.slug,
-      displayName: parsed.data.displayName,
-      bio: parsed.data.bio ?? null,
-      updatedAt: new Date(),
-    })
-    .where(eq(creators.id, creator.id));
-
-  if (parsed.data.topics !== undefined) {
-    const validTopics = parsed.data.topics.filter((s) =>
-      (CREATOR_CATEGORIES as readonly string[]).includes(s)
-    );
-    await db.delete(creatortopics).where(eq(creatortopics.creatorId, creator.id));
-    if (validTopics.length > 0) {
-      await db.insert(creatortopics).values(
-        validTopics.map((slug) => ({
-          creatorId: creator.id,
-          slug,
-          label: DISCOVER_TOPICS_MAP[slug] ?? slug,
-        }))
+    if (parsed.data.topics !== undefined) {
+      const validTopics = parsed.data.topics.filter((s) =>
+        (CREATOR_CATEGORIES as readonly string[]).includes(s),
       );
+      await db
+        .delete(creatortopics)
+        .where(eq(creatortopics.creatorId, creatorId));
+      if (validTopics.length > 0) {
+        await db.insert(creatortopics).values(
+          validTopics.map((slug) => ({
+            creatorId: creatorId,
+            slug,
+            label: DISCOVER_TOPICS_MAP[slug] ?? slug,
+          })),
+        );
+      }
     }
+
+    await db
+      .update(users)
+      .set({
+        avatarUrl: parsed.data.avatarUrl?.trim() || null,
+        fiberNodeRpcUrl: parsed.data.fiberNodeRpcUrl?.trim() || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+    revalidatePath("/creator");
+    return { data: creator, errors: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
   }
-
-  await db
-    .update(users)
-    .set({
-      avatarUrl: parsed.data.avatarUrl?.trim() || null,
-      fiberNodeRpcUrl: parsed.data.fiberNodeRpcUrl?.trim() || null,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, creator.userId));
-
-  revalidatePath("/creator");
-  return { success: true };
 }
 
 export async function updateCreatorNostrPubkey(
-  nostrPubkey: string
-): Promise<{ success?: boolean; message?: string }> {
-  const user = await getCurrentUser();
-  if (!user) return { message: "Unauthorized" };
+  userId: string,
+  nostrPubkey: string,
+) {
+  try {
+    const hex = nostrPubkey.trim();
+    if (!/^[a-fA-F0-9]{64}$/.test(hex)) {
+      return { data: null, error: new Error("Invalid Nostr public key") };
+    }
 
-  const { data: creator } = await getCreatorByUserId(user.id);
-  if (!creator) return { message: "Creator profile not found" };
-
-  const hex = nostrPubkey.trim();
-  if (!/^[a-fA-F0-9]{64}$/.test(hex)) {
-    return { message: "Invalid Nostr public key" };
+    const [user] = await db
+      .update(users)
+      .set({ nostrPubkey: hex, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    revalidatePath("/creator");
+    return { data: user, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
   }
-
-  await db
-    .update(users)
-    .set({ nostrPubkey: hex, updatedAt: new Date() })
-    .where(eq(users.id, creator.userId));
-
-  revalidatePath("/creator");
-  return { success: true };
 }

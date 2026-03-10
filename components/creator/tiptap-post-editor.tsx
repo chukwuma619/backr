@@ -141,6 +141,7 @@ function EditorToolbar({ editor }: { editor: Editor | null }) {
 }
 
 type TiptapPostEditorProps = {
+  id: string;
   content: string;
   onChange: (html: string) => void;
   placeholder?: string;
@@ -149,6 +150,7 @@ type TiptapPostEditorProps = {
 };
 
 export function TiptapPostEditor({
+  id,
   content,
   onChange,
   placeholder = "Share an update, describe your creation, or write something for your supporters…",
@@ -192,7 +194,7 @@ export function TiptapPostEditor({
       )}
     >
       {editable && <EditorToolbar editor={editor} />}
-      <EditorContent editor={editor} />
+      <EditorContent id={id} editor={editor} />
     </div>
   );
 }

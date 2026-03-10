@@ -1,3 +1,6 @@
+"use client";
+
+import { Controller } from "react-hook-form";
 import {
   Card,
   CardHeader,
@@ -6,13 +9,11 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import {
-  FormField,
-  FormItem,
-  FormLabel,
-  FormDescription,
-  FormMessage,
-  FormControl,
-} from "@/components/ui/form";
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field";
 import {
   Select,
   SelectTrigger,
@@ -41,74 +42,70 @@ export function PostSettings({ form, tiers = [] }: PostSettingsProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <FormField
+          <Controller
             control={form.control}
             name="minTierId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-base">Audience</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    value={field.value ? "paid" : "free"}
-                    onValueChange={(value) =>
-                      field.onChange(
-                        value === "free"
-                          ? ""
-                          : tiers.some((t) => t.id === field.value)
-                            ? field.value
-                            : tiers[0]?.id ?? ""
-                      )
-                    }
-                    className="grid gap-3"
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel className="text-base">Audience</FieldLabel>
+                <RadioGroup
+                  value={field.value ? "paid" : "free"}
+                  onValueChange={(value) =>
+                    field.onChange(
+                      value === "free"
+                        ? ""
+                        : tiers.some((t) => t.id === field.value)
+                          ? field.value
+                          : tiers[0]?.id ?? ""
+                    )
+                  }
+                  className="grid gap-3"
+                >
+                  <label
+                    htmlFor="free-access"
+                    className={cn(
+                      "flex cursor-pointer items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50",
+                      !field.value && "border-primary ring-2 ring-primary/20"
+                    )}
                   >
-                    <label
-                      htmlFor="free-access"
-                      className={cn(
-                        "flex cursor-pointer items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50",
-                        !field.value && "border-primary ring-2 ring-primary/20"
-                      )}
-                    >
-                      <Globe className="size-5 shrink-0 text-muted-foreground" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium">Free access</p>
-                        <p className="text-sm text-muted-foreground mt-0.5">
-                          Let everyone access this post and discover your work
-                        </p>
-                      </div>
-                      <RadioGroupItem value="free" id="free-access" />
-                    </label>
+                    <Globe className="size-5 shrink-0 text-muted-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium">Free access</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        Let everyone access this post and discover your work
+                      </p>
+                    </div>
+                    <RadioGroupItem value="free" id="free-access" />
+                  </label>
 
-                    <label
-                      htmlFor="paid-access"
-                      className={cn(
-                        "flex cursor-pointer items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50",
-                        field.value && "border-primary ring-2 ring-primary/20"
-                      )}
-                    >
-                      <Lock className="size-5 shrink-0 text-muted-foreground" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium">Paid access</p>
-                        <p className="text-sm text-muted-foreground mt-0.5">
-                          Limit access to paid members and people who purchase
-                          this post.
-                        </p>
-                      </div>
-                      <RadioGroupItem value="paid" id="paid-access" />
-                    </label>
-                  </RadioGroup>
-                </FormControl>
+                  <label
+                    htmlFor="paid-access"
+                    className={cn(
+                      "flex cursor-pointer items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50",
+                      field.value && "border-primary ring-2 ring-primary/20"
+                    )}
+                  >
+                    <Lock className="size-5 shrink-0 text-muted-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium">Paid access</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        Limit access to paid members and people who purchase
+                        this post.
+                      </p>
+                    </div>
+                    <RadioGroupItem value="paid" id="paid-access" />
+                  </label>
+                </RadioGroup>
                 {field.value && tiers.length > 0 && (
                   <div className="mt-4 space-y-2">
-                    <FormLabel className="text-sm">Paid members</FormLabel>
+                    <FieldLabel className="text-sm">Paid members</FieldLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value || undefined}
                     >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select tier" />
-                        </SelectTrigger>
-                      </FormControl>
+                      <SelectTrigger id="post-settings-minTierId">
+                        <SelectValue placeholder="Select tier" />
+                      </SelectTrigger>
                       <SelectContent>
                         {tiers.map((tier) => (
                           <SelectItem key={tier.id} value={tier.id}>
@@ -117,13 +114,15 @@ export function PostSettings({ form, tiers = [] }: PostSettingsProps) {
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription className="text-xs">
+                    <FieldDescription className="text-xs">
                       Members in selected tiers can access
-                    </FormDescription>
+                    </FieldDescription>
                   </div>
                 )}
-                <FormMessage />
-              </FormItem>
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
             )}
           />
         </CardContent>

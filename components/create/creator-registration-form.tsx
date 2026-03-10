@@ -1,17 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -49,7 +47,11 @@ type FormValues = z.infer<typeof schema>;
 
 const RESERVED_USERNAMES = ["api", "dashboard", "c", "me", "onboarding"];
 
-export function CreatorRegistrationForm() {
+type CreatorRegistrationFormProps = {
+  userId: string;
+};
+
+export function CreatorRegistrationForm({ userId }: CreatorRegistrationFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [usernameStatus, setUsernameStatus] = useState<
     "idle" | "checking" | "available" | "taken" | "invalid"
@@ -125,7 +127,7 @@ export function CreatorRegistrationForm() {
     if (values.bio) formData.set("bio", values.bio.trim());
     formData.set("topics", JSON.stringify(values.topics));
 
-    const result = await createCreator({} as never, formData);
+    const result = await createCreator(userId, "", formData);
 
     if (result?.message) {
       setError(result.message);
@@ -160,128 +162,149 @@ export function CreatorRegistrationForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <FormField
+        <form
+          id="creator-registration-form"
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-6"
+        >
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <FieldGroup>
+            <Controller
               control={form.control}
               name="displayName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Display name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Your name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="creator-registration-form-displayName">
+                    Display name
+                  </FieldLabel>
+                  <Input
+                    id="creator-registration-form-displayName"
+                    placeholder="Your name"
+                    {...field}
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-            <FormField
+            <Controller
               control={form.control}
               name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Username</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                        @
-                      </span>
-                      <Input
-                        placeholder="username"
-                        className="pl-7"
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setUsernameStatus("idle");
-                        }}
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                        {usernameStatus === "checking" && (
-                          <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                        )}
-                        {usernameStatus === "available" && (
-                          <span className="text-green-600 dark:text-green-500 text-sm flex items-center gap-1">
-                            <Check className="size-4" />
-                            Available
-                          </span>
-                        )}
-                        {usernameStatus === "taken" && (
-                          <span className="text-destructive text-sm">
-                            Taken
-                          </span>
-                        )}
-                        {usernameStatus === "invalid" && username && (
-                          <span className="text-destructive text-sm">
-                            Invalid
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="creator-registration-form-username">
+                    Username
+                  </FieldLabel>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                      @
+                    </span>
+                    <Input
+                      id="creator-registration-form-username"
+                      placeholder="username"
+                      className="pl-7"
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        setUsernameStatus("idle");
+                      }}
+                      aria-invalid={fieldState.invalid}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      {usernameStatus === "checking" && (
+                        <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                      )}
+                      {usernameStatus === "available" && (
+                        <span className="text-green-600 dark:text-green-500 text-sm flex items-center gap-1">
+                          <Check className="size-4" />
+                          Available
+                        </span>
+                      )}
+                      {usernameStatus === "taken" && (
+                        <span className="text-destructive text-sm">
+                          Taken
+                        </span>
+                      )}
+                      {usernameStatus === "invalid" && username && (
+                        <span className="text-destructive text-sm">
+                          Invalid
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-            <FormField
+            <Controller
               control={form.control}
               name="bio"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bio (optional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Tell supporters about yourself"
-                      rows={4}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="creator-registration-form-bio">
+                    Bio (optional)
+                  </FieldLabel>
+                  <Textarea
+                    id="creator-registration-form-bio"
+                    placeholder="Tell supporters about yourself"
+                    rows={4}
+                    {...field}
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-            <FormField
+            <Controller
               control={form.control}
               name="topics"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Topics</FormLabel>
+              render={({ fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel>Topics</FieldLabel>
                   <p className="text-sm text-muted-foreground mb-3">
                     Select one or more topics that describe your content
                   </p>
-                  <FormControl>
-                    <div className="flex flex-wrap gap-2">
-                      {DISCOVER_TOPICS.map(({ slug, label }) => (
-                        <button
-                          key={slug}
-                          type="button"
-                          onClick={() => toggleTopic(slug)}
-                          className={cn(
-                            "shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors border",
-                            (selectedTopics ?? []).includes(slug)
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border-transparent",
-                          )}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                  <div className="flex flex-wrap gap-2">
+                    {DISCOVER_TOPICS.map(({ slug, label }) => (
+                      <button
+                        key={slug}
+                        type="button"
+                        onClick={() => toggleTopic(slug)}
+                        className={cn(
+                          "shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors border",
+                          (selectedTopics ?? []).includes(slug)
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border-transparent",
+                        )}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-            <Button
-              type="submit"
-              disabled={
-                form.formState.isSubmitting || usernameStatus === "taken"
-              }
-            >
-              {form.formState.isSubmitting ? "Creating…" : "Create profile"}
-            </Button>
-          </form>
-        </Form>
+            <Field>
+              <Button
+                type="submit"
+                disabled={
+                  form.formState.isSubmitting || usernameStatus === "taken"
+                }
+              >
+                {form.formState.isSubmitting ? "Creating…" : "Create profile"}
+              </Button>
+            </Field>
+          </FieldGroup>
+        </form>
       </CardContent>
     </Card>
   );

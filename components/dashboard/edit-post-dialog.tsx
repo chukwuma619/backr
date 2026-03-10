@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -12,13 +12,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TiptapPostEditor } from "@/components/creator/tiptap-post-editor";
@@ -138,63 +136,76 @@ export function EditPostDialog({
         <DialogHeader>
           <DialogTitle>Edit post</DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSave)}
-            className="space-y-4"
-          >
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <FormField
+        <form
+          id="edit-post-dialog-form"
+          onSubmit={form.handleSubmit(onSave)}
+          className="space-y-6"
+        >
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <FieldGroup>
+            <Controller
               control={form.control}
               name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Post title" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="edit-post-dialog-form-title">
+                    Title
+                  </FieldLabel>
+                  <Input
+                    id="edit-post-dialog-form-title"
+                    placeholder="Post title"
+                    {...field}
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-            <FormField
+            <Controller
               control={form.control}
               name="body"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Content</FormLabel>
-                  <FormControl>
-                    <TiptapPostEditor
-                      content={field.value}
-                      onChange={field.onChange}
-                      placeholder="Content..."
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="edit-post-dialog-form-body">
+                    Content
+                  </FieldLabel>
+                  <TiptapPostEditor
+                    id="edit-post-dialog-form-body"
+                    content={field.value}
+                    onChange={field.onChange}
+                    placeholder="Content..."
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
               )}
             />
-            <Button
-              type="submit"
-              disabled={
-                form.formState.isSubmitting ||
-                nostrStatus === "pending" ||
-                !creator.nostrPubkey
-              }
-            >
-              {form.formState.isSubmitting
-                ? "Saving…"
-                : nostrStatus === "pending"
-                  ? "Updating on Nostr…"
-                  : nostrStatus === "success"
-                    ? "Saved"
-                    : "Save"}
-            </Button>
-            {nostrError && (
-              <p className="text-sm text-destructive">{nostrError}</p>
-            )}
-          </form>
-        </Form>
+            <Field>
+              <Button
+                type="submit"
+                disabled={
+                  form.formState.isSubmitting ||
+                  nostrStatus === "pending" ||
+                  !creator.nostrPubkey
+                }
+              >
+                {form.formState.isSubmitting
+                  ? "Saving…"
+                  : nostrStatus === "pending"
+                    ? "Updating on Nostr…"
+                    : nostrStatus === "success"
+                      ? "Saved"
+                      : "Save"}
+              </Button>
+            </Field>
+          </FieldGroup>
+          {nostrError && (
+            <p className="text-sm text-destructive">{nostrError}</p>
+          )}
+        </form>
       </DialogContent>
     </Dialog>
   );

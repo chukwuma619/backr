@@ -1,17 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createPerk, updatePerk } from "@/app/actions/perks";
@@ -80,39 +78,58 @@ export function PerkForm({
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        <FormField
+    <form
+      id="perk-form"
+      onSubmit={form.handleSubmit(onSubmit)}
+      className="space-y-6"
+    >
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <FieldGroup>
+        <Controller
           control={form.control}
           name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Input placeholder="Early access to posts" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="perk-form-description">
+                Description
+              </FieldLabel>
+              <Input
+                id="perk-form-description"
+                placeholder="Early access to posts"
+                {...field}
+                aria-invalid={fieldState.invalid}
+              />
+              {fieldState.invalid && (
+                <FieldError errors={[fieldState.error]} />
+              )}
+            </Field>
           )}
         />
-        <FormField
+        <Controller
           control={form.control}
           name="type"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Type (optional, e.g. discord, early_access)</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="perk-form-type">
+                Type (optional, e.g. discord, early_access)
+              </FieldLabel>
+              <Input
+                id="perk-form-type"
+                {...field}
+                aria-invalid={fieldState.invalid}
+              />
+              {fieldState.invalid && (
+                <FieldError errors={[fieldState.error]} />
+              )}
+            </Field>
           )}
         />
-        <Button type="submit" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? "Saving…" : perk ? "Save" : "Add"}
-        </Button>
-      </form>
-    </Form>
+        <Field>
+          <Button type="submit" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? "Saving…" : perk ? "Save" : "Add"}
+          </Button>
+        </Field>
+      </FieldGroup>
+    </form>
   );
 }
