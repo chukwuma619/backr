@@ -1,9 +1,19 @@
-import Link from "next/link";
+"use client";
+
 import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { createPost } from "@/app/actions/post";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+
 export function PostEmptyState({
   type,
   creatorId,
@@ -12,11 +22,19 @@ export function PostEmptyState({
   creatorId: string;
 }) {
   const router = useRouter();
+  const title =
+    type === "published" ? "No published posts yet" : "No drafts";
+
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <FileText className="size-12 text-muted-foreground/50 mb-4" />
-      <p className="text-sm text-muted-foreground">
-        {type === "published" ? "No published posts yet." : "No drafts."}{" "}
+    <Empty>
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <FileText />
+        </EmptyMedia>
+        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyDescription>Get started by creating your first post.</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
         <Button
           onClick={async () => {
             const { data, error } = await createPost(creatorId);
@@ -29,11 +47,10 @@ export function PostEmptyState({
               router.push(`/creator/post/${data.id}`);
             }
           }}
-          className="text-primary hover:underline font-medium"
         >
           Create a new post
         </Button>
-      </p>
-    </div>
+      </EmptyContent>
+    </Empty>
   );
 }
