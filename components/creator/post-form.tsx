@@ -38,11 +38,8 @@ export function PostForm({ post }: PostFormProps) {
     defaultValues: {
           title: post?.title ?? "",
           body: post?.content ?? "",
-          status: (post?.status as "draft" | "published") ?? "draft",
         }
   });
-
-  useWatch({ control: form.control, name: "status" });
 
 
 
@@ -51,7 +48,6 @@ export function PostForm({ post }: PostFormProps) {
       const formData = new FormData();
       formData.set("title", values.title.trim());
       formData.set("body", values.body.trim());
-      formData.set("status", values.status);
 
       const { data, error } = await updatePost(post?.id, formData);
 
@@ -112,16 +108,7 @@ export function PostForm({ post }: PostFormProps) {
               )}
             />
            
-            <Field >
-              <Button
-                type="submit"
-                disabled={form.formState.isSubmitting}
-              >
-                {form.formState.isSubmitting
-                  ? "Saving…"
-                  : "Save"}
-              </Button>
-            </Field>
+            
             </FieldGroup>
       </form>
   );

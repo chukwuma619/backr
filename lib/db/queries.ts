@@ -8,6 +8,7 @@ import {
   patronage,
   users,
   posts,
+  postPaidAudienceTiers,
   chats,
   chatParticipants,
   messages,
@@ -389,6 +390,21 @@ export async function getPostById(id: string | number) {
       .where(eq(posts.id, numericId))
       .limit(1);
     return { data: row ?? null, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+}
+
+export async function getPostPaidAudienceTierIds(
+  postId: number
+): Promise<{ data: string[]; error: null } | { data: null; error: Error }> {
+  try {
+    const rows = await db
+      .select({ tierId: postPaidAudienceTiers.tierId })
+      .from(postPaidAudienceTiers)
+      .where(eq(postPaidAudienceTiers.postId, postId));
+    return { data: rows.map((r) => r.tierId), error: null };
   } catch (error) {
     console.error(error);
     return { data: null, error: error as Error };

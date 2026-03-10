@@ -15,6 +15,13 @@
       "when": 1773178404340,
       "tag": "0001_lumpy_wallflower",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773184004326,
+      "tag": "0002_military_shard",
+      "breakpoints": true
     }
   ]
 }

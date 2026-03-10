@@ -1,8 +1,15 @@
 import { notFound } from "next/navigation";
 import { getCreatorForDashboard } from "@/lib/creators/get-creator-for-dashboard";
-import { getPostById } from "@/lib/db/queries";
+import {
+  getPostById,
+  getPostPaidAudienceTierIds,
+  getTiersByCreatorId,
+} from "@/lib/db/queries";
 import { PostForm } from "@/components/creator/post-form";
-
+import { Button } from "@/components/ui/button";
+import { ArrowLeftIcon, EyeIcon } from "lucide-react";
+import Link from "next/link";
+import { PostSettings } from "@/components/creator/post-settings";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -16,11 +23,43 @@ export default async function CreatorPostDetailPage({ params }: Props) {
     return notFound();
   }
 
-  const { data: post, error } = await getPostById(id);
+  const { data: post, error: postError } = await getPostById(id);
 
-  if (error || !post || post.creatorId !== creator.id) {
+  if (postError || !post || post.creatorId !== creator.id) {
     return notFound();
   }
 
-  return <PostForm post={post} />;
+  const [{ data: paidTierIds = [] }, { data: tiers = [] }] = await Promise.all([
+    getPostPaidAudienceTierIds(post.id),
+    getTiersByCreatorId(creator.id),
+  ]);
+
+  return (
+    <div className="flex h-full">
+      <div className="space-y-6 w-full pr-4">
+        <div className="flex justify-between items-center">
+          <Button type="button" variant="ghost" asChild>
+            <Link href="/creator/post">
+              <ArrowLeftIcon className="size-4" /> Back
+            </Link>
+          </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline">
+              <EyeIcon className="size-4" /> Preview
+            </Button>
+
+            <Button type="submit" variant="default" form="post-form">
+              Publish
+            </Button>
+          </div>
+        </div>
+        <PostForm post={post} />
+      </div>
+      <PostSettings
+        post={post}
+        tiers={tiers ?? []}
+        paidAudienceTierIds={paidTierIds ?? []}
+      />
+    </div>
+  );
 }

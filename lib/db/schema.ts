@@ -80,6 +80,9 @@ export const tiers = pgTable("tiers", {
 export const POST_STATUSES = ["draft", "published"] as const;
 export type PostStatus = (typeof POST_STATUSES)[number];
 
+export const POST_AUDIENCES = ["free", "paid"] as const;
+export type PostAudience = (typeof POST_AUDIENCES)[number];
+
 export const posts = pgTable("posts", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   creatorId: uuid("creator_id")
@@ -92,10 +95,24 @@ export const posts = pgTable("posts", {
     .$type<PostStatus>()
     .default("draft"),
   nostrEventId: text("nostr_event_id"),
+  audience: text("audience").$type<PostAudience>(),
   publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const postPaidAudienceTiers = pgTable(
+  "post_paid_audience_tiers",
+  {
+    postId: integer("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    tierId: uuid("tier_id")
+      .notNull()
+      .references(() => tiers.id, { onDelete: "cascade" }),
+  },
+  (t) => [unique().on(t.postId, t.tierId)]
+);
 
 export const CHAT_TYPES = ["group", "direct"] as const;
 export type ChatType = (typeof CHAT_TYPES)[number];
@@ -243,11 +260,26 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
 }));
 
-export const postsRelations = relations(posts, ({ one }) => ({
+export const postPaidAudienceTiersRelations = relations(
+  postPaidAudienceTiers,
+  ({ one }) => ({
+    post: one(posts, {
+      fields: [postPaidAudienceTiers.postId],
+      references: [posts.id],
+    }),
+    tier: one(tiers, {
+      fields: [postPaidAudienceTiers.tierId],
+      references: [tiers.id],
+    }),
+  })
+);
+
+export const postsRelations = relations(posts, ({ one, many }) => ({
   creator: one(creators, {
     fields: [posts.creatorId],
     references: [creators.id],
   }),
+  paidAudienceTiers: many(postPaidAudienceTiers),
 }));
 
 export const patronageRelations = relations(patronage, ({ one }) => ({
@@ -271,7 +303,7 @@ export const tiersRelations = relations(tiers, ({ one, many }) => ({
     references: [creators.id],
   }),
   patronage: many(patronage),
-  posts: many(posts),
+  postPaidAudienceTiers: many(postPaidAudienceTiers),
 }));
 
 export type User = typeof users.$inferSelect;
