@@ -86,7 +86,7 @@ export const posts = pgTable("posts", {
     .notNull()
     .references(() => creators.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
-  content: text("content").notNull(),
+  content: text("content"),
   status: text("status")
     .notNull()
     .$type<PostStatus>()

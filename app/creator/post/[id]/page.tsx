@@ -13,7 +13,7 @@ export default async function CreatorPostDetailPage({ params }: Props) {
   const { creator } = await getCreatorForDashboard();
 
   if (!creator) {
-    return null;
+    return notFound();
   }
 
   const { data: post, error } = await getPostById(id);
@@ -22,5 +22,5 @@ export default async function CreatorPostDetailPage({ params }: Props) {
     return notFound();
   }
 
-  return <PostForm creator={creator} postId={id} post={post} />;
+  return <PostForm post={post} />;
 }

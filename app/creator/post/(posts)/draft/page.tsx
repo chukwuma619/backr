@@ -22,7 +22,7 @@ export default async function CreatorPostDraftPage() {
           ))}
         </ul>
       ) : (
-        <PostEmptyState type="drafts" />
+        <PostEmptyState type="drafts" creatorId={creator.id} />
       )}
     </TabsContent>
   );

@@ -24,7 +24,7 @@ export default async function CreatorPostListPage() {
           ))}
         </ul>
       ) : (
-        <PostEmptyState type="published" />
+        <PostEmptyState type="published" creatorId={creator.id} />
       )}
     </TabsContent>
   );
