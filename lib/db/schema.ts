@@ -1,4 +1,11 @@
-import { pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import {
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
@@ -45,7 +52,7 @@ export const creators = pgTable("creators", {
 export const creatortopics = pgTable(
   "creator_topics",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
     creatorId: uuid("creator_id")
       .notNull()
       .references(() => creators.id, { onDelete: "cascade" }),
@@ -70,15 +77,22 @@ export const tiers = pgTable("tiers", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const POST_STATUSES = ["draft", "published"] as const;
+export type PostStatus = (typeof POST_STATUSES)[number];
+
 export const posts = pgTable("posts", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   creatorId: uuid("creator_id")
     .notNull()
     .references(() => creators.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   content: text("content").notNull(),
+  status: text("status")
+    .notNull()
+    .$type<PostStatus>()
+    .default("draft"),
   nostrEventId: text("nostr_event_id"),
-  publishedAt: timestamp("published_at").notNull().defaultNow(),
+  publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -131,7 +145,7 @@ export const notifications = pgTable("notifications", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   type: text("type").notNull().$type<NotificationType>(),
-  entityId: uuid("entity_id").notNull(),
+  entityId: text("entity_id").notNull(),
   creatorId: uuid("creator_id")
     .notNull()
     .references(() => creators.id, { onDelete: "cascade" }),

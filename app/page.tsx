@@ -1,29 +1,35 @@
-import { WalletConnect } from "@/components/wallet-connect";
-import { SignedInStatus } from "@/components/signed-in-status";
-import { DashboardLink } from "@/components/dashboard-link";
-import { FeedLink } from "@/components/feed-link";
-import { SupportsLink } from "@/components/supports-link";
 import Link from "next/link";
+import { WalletConnect } from "@/components/wallet-connect";
+import { DashboardLink } from "@/components/dashboard-link";
+
+import { LandingHero } from "@/components/landing-hero";
+import { LandingFeatures } from "@/components/landing-features";
 
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <header className="border-b border-border px-4 py-3 flex items-center justify-end gap-2">
-        <Link href="/dashboard/discover" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-          Discover
+      <header className="border-b border-border px-4 py-3 flex items-center justify-between">
+        <Link
+          href="/"
+          className="text-lg font-semibold tracking-tight text-foreground"
+        >
+          Backr
         </Link>
-        <FeedLink />
-        <SupportsLink />
-        <DashboardLink />
-        <WalletConnect />
+        <nav className="flex items-center gap-4">
+
+          <DashboardLink />
+          <WalletConnect />
+        </nav>
       </header>
-      <main className="flex-1 flex flex-col items-center justify-center p-6">
-        <h1 className="text-2xl font-semibold tracking-tight mb-2">Backr</h1>
-        <p className="text-muted-foreground text-center mb-8">
-          Creator membership on Nervos CKB
-        </p>
-        <SignedInStatus />
+
+      <main className="flex-1">
+        <LandingHero />
+        <LandingFeatures />
       </main>
+
+      <footer className="border-t border-border px-4 py-6 text-center text-sm text-muted-foreground">
+        <p>Creator membership on Nervos CKB</p>
+      </footer>
     </div>
   );
 }

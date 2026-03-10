@@ -105,7 +105,7 @@ export function EditPostDialog({
         postId: post.id,
         title: values.title.trim(),
         body: values.body.trim(),
-        publishedAt: new Date(post.publishedAt),
+        publishedAt: new Date(post.publishedAt ?? post.createdAt),
       });
 
       const updateResult = await updatePostNostrEventId(post.id, eventId);

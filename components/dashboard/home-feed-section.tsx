@@ -61,7 +61,7 @@ export async function HomeFeedSection({ userId }: { userId: string }) {
                 <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-base">{post.title}</CardTitle>
                   <span className="text-xs text-muted-foreground shrink-0">
-                    {format(new Date(post.publishedAt), "MMM d, yyyy")}
+                    {format(new Date(post.publishedAt ?? post.createdAt), "MMM d, yyyy")}
                   </span>
                 </div>
                 <CardDescription>

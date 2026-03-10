@@ -37,7 +37,7 @@ export function PostListItem({ post, creator }: { post: Post; creator: Creator }
         {post.content}
       </p>
       <p className="text-xs text-muted-foreground mt-2">
-        {format(new Date(post.publishedAt), "MMM d, yyyy")}
+        {format(new Date(post.publishedAt ?? post.createdAt), "MMM d, yyyy")}
       </p>
       <EditPostDialog
         post={post}

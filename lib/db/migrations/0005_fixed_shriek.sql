@@ -1,1 +1,0 @@
-ALTER TABLE "patronage" ADD COLUMN "platform_fee_fiber_tx_ref" text;

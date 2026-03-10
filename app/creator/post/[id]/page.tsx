@@ -16,14 +16,11 @@ export default async function CreatorPostDetailPage({ params }: Props) {
     return null;
   }
 
-  const { data: post } = await getPostById(id);
+  const { data: post, error } = await getPostById(id);
 
-  if (!post || post.creatorId !== creator.id) {
-    notFound();
+  if (error || !post || post.creatorId !== creator.id) {
+    return notFound();
   }
 
-  return (
- 
-      <PostForm creator={creator} post={post} />
-  );
+  return <PostForm creator={creator} postId={id} post={post} />;
 }

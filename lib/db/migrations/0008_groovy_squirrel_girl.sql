@@ -1,1 +1,0 @@
-ALTER TABLE "creators" ALTER COLUMN "username" DROP DEFAULT;

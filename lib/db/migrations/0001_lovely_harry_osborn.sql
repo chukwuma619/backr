@@ -1,1 +1,0 @@
-ALTER TABLE "creators" DROP COLUMN "ckb_address";

@@ -21,7 +21,7 @@ const RELAYS = [
 ];
 
 export type PublishPostParams = {
-  postId: string;
+  postId: string | number;
   title: string;
   body: string;
   publishedAt?: Date;
@@ -29,7 +29,7 @@ export type PublishPostParams = {
 
 function buildEventTemplate(params: PublishPostParams): EventTemplate {
   const tags: string[][] = [
-    ["d", params.postId],
+    ["d", String(params.postId)],
     ["title", params.title],
     ["t", "backr"],
   ];

@@ -1,1 +1,0 @@
-ALTER TABLE "creators" ADD COLUMN "category" text;

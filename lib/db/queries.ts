@@ -339,6 +339,21 @@ export async function getPostsByCreatorId(creatorId: string) {
       .select()
       .from(posts)
       .where(eq(posts.creatorId, creatorId))
+      .orderBy(desc(sql`COALESCE(${posts.publishedAt}, ${posts.createdAt})`));
+
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getPublishedPostsByCreatorId(creatorId: string) {
+  try {
+    const rows = await db
+      .select()
+      .from(posts)
+      .where(and(eq(posts.creatorId, creatorId), eq(posts.status, "published")))
       .orderBy(desc(posts.publishedAt));
 
     return { data: rows, error: null };
@@ -348,12 +363,30 @@ export async function getPostsByCreatorId(creatorId: string) {
   }
 }
 
-export async function getPostById(id: string) {
+export async function getDraftPostsByCreatorId(creatorId: string) {
   try {
+    const rows = await db
+      .select()
+      .from(posts)
+      .where(and(eq(posts.creatorId, creatorId), eq(posts.status, "draft")))
+      .orderBy(desc(posts.createdAt));
+
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getPostById(id: string | number) {
+  try {
+    const numericId = typeof id === "string" ? parseInt(id, 10) : id;
+    if (Number.isNaN(numericId)) return { data: null, error: null };
+
     const [row] = await db
       .select()
       .from(posts)
-      .where(eq(posts.id, id))
+      .where(eq(posts.id, numericId))
       .limit(1);
     return { data: row ?? null, error: null };
   } catch (error) {
@@ -363,10 +396,14 @@ export async function getPostById(id: string) {
 }
 
 export async function canPatronAccessPost(
-  postId: string,
+  postId: string | number,
   patronUserId: string
 ): Promise<boolean> {
   try {
+    const numericId =
+      typeof postId === "string" ? parseInt(postId, 10) : postId;
+    if (Number.isNaN(numericId)) return false;
+
     const [post] = await db
       .select({
         creatorId: posts.creatorId,
@@ -374,7 +411,7 @@ export async function canPatronAccessPost(
       })
       .from(posts)
       .innerJoin(tiers, eq(posts.creatorId, tiers.creatorId))
-      .where(eq(posts.id, postId))
+      .where(and(eq(posts.id, numericId), eq(posts.status, "published")))
       .limit(1);
     if (!post) return false;
 
@@ -469,7 +506,12 @@ export async function getGatedFeedForPatron(patronUserId: string) {
       .from(posts)
       .innerJoin(creators, eq(posts.creatorId, creators.id))
       .innerJoin(tiers, eq(posts.creatorId, tiers.creatorId))
-      .where(inArray(posts.creatorId, creatorIds))
+      .where(
+        and(
+          inArray(posts.creatorId, creatorIds),
+          eq(posts.status, "published")
+        )
+      )
       .orderBy(desc(posts.publishedAt));
 
     const data = allPosts
@@ -943,7 +985,13 @@ export async function getNotificationsForUser(userId: string, limit = 50) {
       .from(notifications)
       .innerJoin(creators, eq(notifications.creatorId, creators.id))
       .innerJoin(creatorUser, eq(creators.userId, creatorUser.id))
-      .leftJoin(posts, and(eq(notifications.entityId, posts.id), eq(notifications.type, "new_post")))
+      .leftJoin(
+        posts,
+        and(
+          sql`${notifications.entityId} = ${posts.id}::text`,
+          eq(notifications.type, "new_post")
+        )
+      )
       .where(eq(notifications.userId, userId))
       .orderBy(desc(notifications.createdAt))
       .limit(limit);
@@ -969,7 +1017,7 @@ export async function getNotificationsForUser(userId: string, limit = 50) {
 }
 
 export async function createNotificationsForNewPost(
-  postId: string,
+  postId: number,
   creatorId: string,
   minTierId: string
 ) {
@@ -1004,7 +1052,7 @@ export async function createNotificationsForNewPost(
       eligible.map((p) => ({
         userId: p.patronUserId,
         type: "new_post" as const,
-        entityId: postId,
+        entityId: String(postId),
         creatorId,
       }))
     );
