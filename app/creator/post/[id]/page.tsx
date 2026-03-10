@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCreatorForDashboard } from "@/lib/creators/get-creator-for-dashboard";
 import { getPostById } from "@/lib/db/queries";
-import { PostDetailSection } from "@/components/creator/post-detail-section";
+import { PostForm } from "@/components/creator/post-form";
 
 
 type Props = {
@@ -25,6 +24,6 @@ export default async function CreatorPostDetailPage({ params }: Props) {
 
   return (
  
-      <PostDetailSection post={post} creator={creator} />
+      <PostForm creator={creator} post={post} />
   );
 }
