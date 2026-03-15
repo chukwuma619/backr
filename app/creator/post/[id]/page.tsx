@@ -5,12 +5,11 @@ import {
   getPostPaidAudienceTierIds,
   getTiersByCreatorId,
 } from "@/lib/db/queries";
-import { PostForm } from "@/components/creator/post-form";
+import { PostEditor } from "@/components/creator/post-editor";
 import { PostStatusButton } from "@/components/creator/post-status-button";
 import { Button } from "@/components/ui/button";
 import { ArrowLeftIcon, EyeIcon } from "lucide-react";
 import Link from "next/link";
-import { PostSettings } from "@/components/creator/post-settings";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -36,29 +35,30 @@ export default async function CreatorPostDetailPage({ params }: Props) {
   ]);
 
   return (
-    <div className="flex h-full">
-      <div className="space-y-6 w-full pr-4">
-        <div className="flex justify-between items-center">
-          <Button type="button" variant="ghost" asChild>
+    <PostEditor
+      post={post}
+      tiers={tiers ?? []}
+      paidAudienceTierIds={paidTierIds ?? []}
+      header={
+        <div className="flex flex-col sm:flex-row flex-wrap justify-between items-stretch sm:items-center gap-3">
+          <Button type="button" variant="ghost" asChild className="self-start">
             <Link href="/creator/post">
               <ArrowLeftIcon className="size-4" /> Back
             </Link>
           </Button>
-          <div className="flex gap-2">
-            <Button type="button" variant="outline">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="flex-1 sm:flex-none min-w-0"
+            >
               <EyeIcon className="size-4" /> Preview
             </Button>
-
             <PostStatusButton postId={post.id} status={post.status} />
           </div>
         </div>
-        <PostForm post={post} />
-      </div>
-      <PostSettings
-        post={post}
-        tiers={tiers ?? []}
-        paidAudienceTierIds={paidTierIds ?? []}
-      />
-    </div>
+      }
+    />
   );
 }

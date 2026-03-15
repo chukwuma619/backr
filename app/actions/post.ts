@@ -175,3 +175,75 @@ export async function updatePostStatus(
   }
 }
 
+const updateWithSettingsSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200),
+  body: z.string().min(1, "Content is required").max(50000),
+  audience: z.enum(["free", "paid"]),
+  minTierId: z.string(),
+});
+
+export async function updatePostWithSettings(
+  postId: number,
+  formData: FormData
+): Promise<
+  | { data: null; error: null }
+  | { data: null; error: { message: string } }
+> {
+  const raw = {
+    title: (formData.get("title") as string)?.trim(),
+    body: (formData.get("body") as string)?.trim(),
+    audience: formData.get("audience") as string,
+    minTierId: (formData.get("minTierId") as string) ?? "",
+  };
+
+  const parsed = updateWithSettingsSchema.safeParse(raw);
+  if (!parsed.success) {
+    const msg = Object.values(parsed.error.flatten().fieldErrors).flat()[0];
+    return { data: null, error: { message: msg ?? "Invalid" } };
+  }
+
+  const { title, body, audience, minTierId } = parsed.data;
+
+  try {
+    await db
+      .update(posts)
+      .set({
+        title,
+        content: body,
+        audience: audience as "free" | "paid",
+        updatedAt: new Date(),
+      })
+      .where(eq(posts.id, postId));
+
+    await db.delete(postPaidAudienceTiers).where(eq(postPaidAudienceTiers.postId, postId));
+
+    if (audience === "paid" && minTierId) {
+      const [post] = await db
+        .select({ creatorId: posts.creatorId })
+        .from(posts)
+        .where(eq(posts.id, postId))
+        .limit(1);
+      if (post) {
+        const tierIds =
+          minTierId === "all"
+            ? (await db.select({ id: tiers.id }).from(tiers).where(eq(tiers.creatorId, post.creatorId))).map((t) => t.id)
+            : [minTierId];
+        if (tierIds.length > 0) {
+          await db.insert(postPaidAudienceTiers).values(
+            tierIds.map((tierId) => ({ postId, tierId }))
+          );
+        }
+      }
+    }
+
+    revalidatePath("/creator/post");
+    return { data: null, error: null };
+  } catch (error) {
+    console.error(error);
+    return {
+      data: null,
+      error: { message: error instanceof Error ? error.message : "Failed to save" },
+    };
+  }
+}
+
