@@ -628,6 +628,36 @@ export async function getPatronagesByUserId(patronUserId: string) {
   }
 }
 
+export async function getPaymentHistoryByCreatorId(
+  creatorId: string,
+  limit = 100
+) {
+  try {
+    const rows = await db
+      .select({
+        id: patronage.id,
+        patronCkbAddress: users.ckbAddress,
+        tierName: tiers.name,
+        amount: patronage.amount,
+        currency: patronage.currency,
+        status: patronage.status,
+        subscribedAt: patronage.createdAt,
+        lastPaymentAt: patronage.lastPaymentAt,
+      })
+      .from(patronage)
+      .innerJoin(users, eq(patronage.patronUserId, users.id))
+      .innerJoin(tiers, eq(patronage.tierId, tiers.id))
+      .where(eq(patronage.creatorId, creatorId))
+      .orderBy(desc(patronage.createdAt))
+      .limit(limit);
+
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
 export async function getBillingHistoryForUser(patronUserId: string, limit = 50) {
   try {
     const rows = await db
