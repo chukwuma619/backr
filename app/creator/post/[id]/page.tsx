@@ -6,6 +6,7 @@ import {
   getTiersByCreatorId,
 } from "@/lib/db/queries";
 import { PostForm } from "@/components/creator/post-form";
+import { PostStatusButton } from "@/components/creator/post-status-button";
 import { Button } from "@/components/ui/button";
 import { ArrowLeftIcon, EyeIcon } from "lucide-react";
 import Link from "next/link";
@@ -48,9 +49,7 @@ export default async function CreatorPostDetailPage({ params }: Props) {
               <EyeIcon className="size-4" /> Preview
             </Button>
 
-            <Button type="submit" variant="default" form="post-form">
-              Publish
-            </Button>
+            <PostStatusButton postId={post.id} status={post.status} />
           </div>
         </div>
         <PostForm post={post} />

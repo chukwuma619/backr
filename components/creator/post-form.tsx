@@ -108,6 +108,9 @@ export function PostForm({ post }: PostFormProps) {
               )}
             />
            
+          <Field>
+            <Button type="submit">Update</Button>
+          </Field>
             
             </FieldGroup>
       </form>

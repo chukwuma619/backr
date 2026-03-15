@@ -44,13 +44,11 @@ export async function updatePost(
   const raw = {
     title: formData.get("title") as string,
     body: formData.get("body") as string,
-    status: (formData.get("status") as string) || "draft",
   };
 
   const parsed = updateSchema.safeParse({
     title: raw.title?.trim(),
     body: raw.body?.trim(),
-    status: raw.status,
   });
 
   if (!parsed.success) {
@@ -65,7 +63,6 @@ export async function updatePost(
     .set({
       title: parsed.data.title,
       content: parsed.data.body,
-      status: parsed.data.status,
       updatedAt: new Date(),
     })
     .where(eq(posts.id, postId))
@@ -80,6 +77,8 @@ export async function updatePost(
     };
   }
 }
+
+
 
 const audienceSchema = z.object({
   audience: z.enum(["free", "paid"]),
@@ -136,6 +135,43 @@ export async function updatePostAudience(
   } catch (error) {
     console.error(error);
     return { data: null, error: { message: error instanceof Error ? error.message : "Failed to update audience" } };
+  }
+}
+
+const statusSchema = z.enum(["draft", "published"]);
+
+export async function updatePostStatus(
+  postId: number,
+  status: "draft" | "published"
+): Promise<
+  | { data: { status: string }; error: null }
+  | { data: null; error: { message: string } }
+> {
+  const parsed = statusSchema.safeParse(status);
+  if (!parsed.success) {
+    return { data: null, error: { message: "Invalid status" } };
+  }
+
+  try {
+    await db
+      .update(posts)
+      .set({
+        status: parsed.data,
+        ...(parsed.data === "published"
+          ? { publishedAt: new Date() }
+          : { publishedAt: null }),
+        updatedAt: new Date(),
+      })
+      .where(eq(posts.id, postId));
+
+    revalidatePath("/creator/post");
+    return { data: { status: parsed.data }, error: null };
+  } catch (error) {
+    console.error(error);
+    return {
+      data: null,
+      error: { message: error instanceof Error ? error.message : "Failed to update status" },
+    };
   }
 }
 
