@@ -180,7 +180,7 @@ export async function getCreatorByUserId(userId: string) {
 export async function getTiersByCreatorId(creatorId: string) {
   try {
     const rows = await db
-      .select({ id: tiers.id, name: tiers.name, amount: tiers.amount, coverImageUrl: tiers.coverImageUrl })
+      .select()
       .from(tiers)
       .where(eq(tiers.creatorId, creatorId))
       .orderBy(tiers.createdAt);
@@ -191,6 +191,18 @@ export async function getTiersByCreatorId(creatorId: string) {
   }
 }
 
+export async function getCreatorTopicSlugs(creatorId: string) {
+  try {
+    const rows = await db
+      .select({ slug: creatortopics.slug })
+      .from(creatortopics)
+      .where(eq(creatortopics.creatorId, creatorId));
+    return { data: rows.map((r) => r.slug), error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
 
 
 export async function createPatronage(data: {

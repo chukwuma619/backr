@@ -64,7 +64,7 @@ export function ChangeTierForm({
           </SelectItem>
           {otherTiers.map((t) => (
             <SelectItem key={t.id} value={t.id}>
-              {t.name} · {t.amount} CKB
+              {t.name} · ${t.amount}
             </SelectItem>
           ))}
         </SelectContent>

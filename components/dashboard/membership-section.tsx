@@ -59,7 +59,7 @@ export function MembershipSection({
             <ItemContent>
               <ItemTitle>{p.creatorDisplayName}</ItemTitle>
               <ItemDescription>
-                @{p.creatorUsername} · {p.tierName} · {p.tierAmount} CKB
+                @{p.creatorUsername} · {p.tierName} · ${p.tierAmount}
               </ItemDescription>
             </ItemContent>
           </Link>

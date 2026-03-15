@@ -117,7 +117,7 @@ export function PostSettingsFields({ control, tiers }: PostSettingsFieldsProps) 
                           <SelectItem value="all">All tiers</SelectItem>
                           {tiers.map((tier) => (
                             <SelectItem key={tier.id} value={tier.id}>
-                              {tier.name} ({tier.amount} CKB)
+                              {tier.name} (${tier.amount})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -277,7 +277,7 @@ export function PostSettings({
                           <SelectItem value="all">All tiers</SelectItem>
                           {tiers.map((tier) => (
                             <SelectItem key={tier.id} value={tier.id}>
-                              {tier.name} ({tier.amount} CKB)
+                              {tier.name} (${tier.amount})
                             </SelectItem>
                           ))}
                         </SelectContent>

@@ -13,6 +13,7 @@ import {
 } from "@/lib/db/schema";
 
 import { validateSlug } from "@/lib/creators/slug";
+import { getCreatorForDashboard } from "@/lib/creators/get-creator-for-dashboard";
 import { DISCOVER_TOPICS } from "@/lib/discover/constants";
 
 const DISCOVER_TOPICS_MAP = Object.fromEntries(
@@ -199,11 +200,20 @@ export async function updateCreator(
       })
       .where(eq(users.id, userId));
     revalidatePath("/creator");
+    revalidatePath("/creator/settings/basic");
     return { data: creator, errors: null };
   } catch (error) {
     console.error(error);
     return { data: null, error: error as Error };
   }
+}
+
+export async function updateCreatorProfile(formData: FormData) {
+  const { user, creator } = await getCreatorForDashboard();
+  if (!user || !creator) {
+    return { message: "Unauthorized", errors: undefined };
+  }
+  return updateCreator(user.id, creator.id, formData);
 }
 
 export async function updateCreatorNostrPubkey(
@@ -222,9 +232,16 @@ export async function updateCreatorNostrPubkey(
       .where(eq(users.id, userId))
       .returning();
     revalidatePath("/creator");
+    revalidatePath("/creator/settings/basic");
     return { data: user, error: null };
   } catch (error) {
     console.error(error);
     return { data: null, error: error as Error };
   }
+}
+
+export async function updateCreatorNostrPubkeyFromSession(nostrPubkey: string) {
+  const { user } = await getCreatorForDashboard();
+  if (!user) return { data: null, error: new Error("Unauthorized") };
+  return updateCreatorNostrPubkey(user.id, nostrPubkey);
 }

@@ -87,7 +87,7 @@ export function TiersSection({
                       <CardDescription>{tier.description}</CardDescription>
                     )}
                     <p className="text-sm font-medium mt-1">
-                      {tier.amount} CKB
+                      ${tier.amount}
                     </p>
                   </div>
                   <div className="flex gap-2">

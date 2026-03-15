@@ -138,11 +138,11 @@ export function TierForm({
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
               <FieldLabel htmlFor="tier-form-amount">
-                Amount (CKB)
+                Amount ($)
               </FieldLabel>
               <Input
                 id="tier-form-amount"
-                placeholder="5"
+                placeholder="5.00"
                 {...field}
                 aria-invalid={fieldState.invalid}
               />
