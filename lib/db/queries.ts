@@ -1126,17 +1126,28 @@ export async function getPatronsByCreatorId(creatorId: string) {
   try {
     const rows = await db
       .select({
-        id: patronage.id,
+        patronageId: patronage.id,
+        patronUserId: users.id,
+        patronCkbAddress: users.ckbAddress,
+        patronAvatarUrl: users.avatarUrl,
+        tierName: tiers.name,
+        tierAmount: tiers.amount,
         amount: patronage.amount,
         currency: patronage.currency,
         status: patronage.status,
         lastPaymentAt: patronage.lastPaymentAt,
-        patronAddress: users.ckbAddress,
+        subscribedAt: patronage.createdAt,
       })
       .from(patronage)
       .innerJoin(users, eq(patronage.patronUserId, users.id))
-      .where(eq(patronage.creatorId, creatorId))
-      .orderBy(desc(patronage.lastPaymentAt));
+      .innerJoin(tiers, eq(patronage.tierId, tiers.id))
+      .where(
+        and(
+          eq(patronage.creatorId, creatorId),
+          eq(patronage.status, "active")
+        )
+      )
+      .orderBy(desc(patronage.createdAt));
 
     return { data: rows, error: null };
   } catch (error) {

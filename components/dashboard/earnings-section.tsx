@@ -111,12 +111,12 @@ export async function EarningsSection({ creatorId }: { creatorId: string }) {
             <ul className="space-y-2">
               {patrons.slice(0, 10).map((p) => (
                 <li
-                  key={p.id}
+                  key={p.patronageId}
                   className="flex items-center justify-between text-sm py-2 border-b last:border-0"
                 >
                   <span className="text-muted-foreground font-mono">
-                    {p.patronAddress
-                      ? truncateAddress(p.patronAddress)
+                    {p.patronCkbAddress
+                      ? truncateAddress(p.patronCkbAddress)
                       : "—"}
                   </span>
                   <span>
