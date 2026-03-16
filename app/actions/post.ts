@@ -78,7 +78,23 @@ export async function updatePost(
   }
 }
 
-
+export async function updatePostNostrEventId(
+  postId: number,
+  eventId: string
+): Promise<{ message?: string } | void> {
+  try {
+    await db
+      .update(posts)
+      .set({ nostrEventId: eventId.trim(), updatedAt: new Date() })
+      .where(eq(posts.id, postId));
+    revalidatePath("/creator/post");
+  } catch (error) {
+    console.error(error);
+    return {
+      message: error instanceof Error ? error.message : "Failed to update Nostr event ID",
+    };
+  }
+}
 
 const audienceSchema = z.object({
   audience: z.enum(["free", "paid"]),

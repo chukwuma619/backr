@@ -56,14 +56,14 @@ export function EditPostDialog({
     resolver: zodResolver(schema),
     defaultValues: {
       title: post.title,
-      body: post.content,
+      body: post.content ?? "",
     },
   });
 
   useEffect(() => {
     form.reset({
       title: post.title,
-      body: post.content,
+      body: post.content ?? "",
     });
   }, [post.id, post.title, post.content, form]);
 
@@ -83,8 +83,8 @@ export function EditPostDialog({
 
     const result = await updatePost(post.id, formData);
 
-    if (result?.message) {
-      setError(result.message);
+    if (result && "error" in result && result.error) {
+      setError(result.error.message);
       return;
     }
     if (result?.errors) {

@@ -29,7 +29,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { updateCreator, updateCreatorNostrPubkey } from "@/app/actions/creator";
+import { updateCreatorProfile, updateCreatorNostrPubkeyFromSession } from "@/app/actions/creator";
 import { getNostrPublicKey } from "@/lib/nostr/publish-post";
 import type { Creator } from "@/lib/db/schema";
 
@@ -90,9 +90,10 @@ export function ProfileForm({
     if (values.category) formData.set("category", values.category);
     if (values.avatarUrl) formData.set("avatarUrl", values.avatarUrl.trim());
     if (values.fiberNodeRpcUrl) formData.set("fiberNodeRpcUrl", values.fiberNodeRpcUrl.trim());
-    const result = await updateCreator({} as never, formData);
+    formData.set("topics", JSON.stringify(values.category ? [values.category] : ["tech"]));
+    const result = await updateCreatorProfile(formData);
 
-    if (result?.message) {
+    if (result && "message" in result && result.message) {
       setError(result.message);
       return;
     }
@@ -112,9 +113,9 @@ export function ProfileForm({
     setNostrStatus("pending");
     try {
       const pubkey = await getNostrPublicKey();
-      const result = await updateCreatorNostrPubkey(pubkey);
-      if (result?.message) {
-        throw new Error(result.message);
+      const result = await updateCreatorNostrPubkeyFromSession(pubkey);
+      if (result?.error) {
+        throw result.error;
       }
       setNostrStatus("success");
       router.refresh();

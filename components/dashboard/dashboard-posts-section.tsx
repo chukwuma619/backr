@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -5,8 +6,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { getPostsByCreatorId } from "@/lib/db/queries";
-import { PostForm } from "./post-form";
 import { PostListItem } from "./post-list-item";
 import type { Tier } from "@/lib/db/schema";
 import type { Creator } from "@/lib/db/schema";
@@ -33,7 +34,11 @@ export async function DashboardPostsSection({
 
   return (
     <div className="space-y-8">
-      <PostForm tiers={tiers} creator={creator} />
+      <div className="flex justify-end">
+        <Button asChild size="sm">
+          <Link href="/creator/post/draft">Create a post</Link>
+        </Button>
+      </div>
 
       <Card>
         <CardHeader>

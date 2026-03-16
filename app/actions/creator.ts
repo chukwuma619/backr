@@ -14,6 +14,7 @@ import {
 
 import { validateSlug } from "@/lib/creators/slug";
 import { getCreatorForDashboard } from "@/lib/creators/get-creator-for-dashboard";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { DISCOVER_TOPICS } from "@/lib/discover/constants";
 
 const DISCOVER_TOPICS_MAP = Object.fromEntries(
@@ -48,6 +49,16 @@ export type CreateCreatorState = {
   message?: string;
   success?: boolean;
 };
+
+export async function createCreatorFromSession(
+  formData: FormData,
+): Promise<CreateCreatorState> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { message: "Unauthorized", success: false };
+  }
+  return createCreator(user.id, "", formData);
+}
 
 export async function createCreator(
   userId: string,

@@ -20,7 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { createCreator } from "@/app/actions/creator";
+import { createCreatorFromSession } from "@/app/actions/creator";
 
 const schema = z.object({
   slug: z
@@ -62,10 +62,11 @@ export function OnboardingForm() {
     formData.set("displayName", values.displayName.trim());
     if (values.bio) formData.set("bio", values.bio.trim());
     if (values.avatarUrl) formData.set("avatarUrl", values.avatarUrl.trim());
+    formData.set("topics", JSON.stringify(["tech"]));
 
-    const result = await createCreator({} as never, formData);
+    const result = await createCreatorFromSession(formData);
 
-    if (result?.message) {
+    if (result && "message" in result && result.message) {
       setError(result.message);
       return;
     }

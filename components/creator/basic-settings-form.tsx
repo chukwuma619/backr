@@ -102,7 +102,7 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
 
     const result = await updateCreatorProfile(formData);
 
-    if (result?.message) {
+    if (result && "message" in result && result.message) {
       setError(result.message);
       return;
     }

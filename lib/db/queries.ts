@@ -215,6 +215,20 @@ export async function getTiersByCreatorId(creatorId: string) {
   }
 }
 
+export async function getTierById(tierId: string) {
+  try {
+    const [row] = await db
+      .select({ id: tiers.id, amount: tiers.amount, creatorId: tiers.creatorId })
+      .from(tiers)
+      .where(eq(tiers.id, tierId))
+      .limit(1);
+    return { data: row ?? null, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+}
+
 export async function getCreatorTopicSlugs(creatorId: string) {
   try {
     const rows = await db
@@ -367,6 +381,75 @@ export async function updatePatronageAfterRenewal(
       .where(eq(patronage.id, patronageId))
       .returning();
     return { data: row, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+}
+
+export async function getPatronageById(patronageId: string) {
+  try {
+    const [row] = await db
+      .select({
+        id: patronage.id,
+        patronUserId: patronage.patronUserId,
+        creatorId: patronage.creatorId,
+        tierId: patronage.tierId,
+      })
+      .from(patronage)
+      .where(eq(patronage.id, patronageId))
+      .limit(1);
+    return { data: row ?? null, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+}
+
+export async function cancelPatronageById(
+  patronageId: string,
+  patronUserId: string
+) {
+  try {
+    const [row] = await db
+      .update(patronage)
+      .set({ status: "cancelled", updatedAt: new Date() })
+      .where(
+        and(
+          eq(patronage.id, patronageId),
+          eq(patronage.patronUserId, patronUserId)
+        )
+      )
+      .returning({ id: patronage.id });
+    return { data: row ?? null, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+}
+
+export async function updatePatronageTier(
+  patronageId: string,
+  patronUserId: string,
+  tierId: string,
+  amount: string
+) {
+  try {
+    const [row] = await db
+      .update(patronage)
+      .set({
+        tierId,
+        amount,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(patronage.id, patronageId),
+          eq(patronage.patronUserId, patronUserId)
+        )
+      )
+      .returning({ id: patronage.id });
+    return { data: row ?? null, error: null };
   } catch (error) {
     console.error(error);
     return { data: null, error: error as Error };
