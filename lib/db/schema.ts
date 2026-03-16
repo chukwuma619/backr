@@ -117,6 +117,9 @@ export const postPaidAudienceTiers = pgTable(
 export const CHAT_TYPES = ["group", "direct"] as const;
 export type ChatType = (typeof CHAT_TYPES)[number];
 
+export const CHAT_AUDIENCES = ["free", "paid"] as const;
+export type ChatAudience = (typeof CHAT_AUDIENCES)[number];
+
 export const chats = pgTable("chats", {
   id: uuid("id").primaryKey().defaultRandom(),
   type: text("type").notNull().$type<ChatType>(),
@@ -126,9 +129,24 @@ export const chats = pgTable("chats", {
   patronUserId: uuid("patron_user_id").references(() => users.id, {
     onDelete: "cascade",
   }),
+  name: text("name"), // display name for group chats
+  audience: text("audience").$type<ChatAudience>(), // free | paid for group chats
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const chatPaidAudienceTiers = pgTable(
+  "chat_paid_audience_tiers",
+  {
+    chatId: uuid("chat_id")
+      .notNull()
+      .references(() => chats.id, { onDelete: "cascade" }),
+    tierId: uuid("tier_id")
+      .notNull()
+      .references(() => tiers.id, { onDelete: "cascade" }),
+  },
+  (t) => [unique().on(t.chatId, t.tierId)]
+);
 
 export const chatParticipants = pgTable("chat_participants", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -233,7 +251,22 @@ export const chatsRelations = relations(chats, ({ one, many }) => ({
   }),
   participants: many(chatParticipants),
   messages: many(messages),
+  paidAudienceTiers: many(chatPaidAudienceTiers),
 }));
+
+export const chatPaidAudienceTiersRelations = relations(
+  chatPaidAudienceTiers,
+  ({ one }) => ({
+    chat: one(chats, {
+      fields: [chatPaidAudienceTiers.chatId],
+      references: [chats.id],
+    }),
+    tier: one(tiers, {
+      fields: [chatPaidAudienceTiers.tierId],
+      references: [tiers.id],
+    }),
+  })
+);
 
 export const chatParticipantsRelations = relations(
   chatParticipants,
@@ -304,6 +337,7 @@ export const tiersRelations = relations(tiers, ({ one, many }) => ({
   }),
   patronage: many(patronage),
   postPaidAudienceTiers: many(postPaidAudienceTiers),
+  chatPaidAudienceTiers: many(chatPaidAudienceTiers),
 }));
 
 export type User = typeof users.$inferSelect;
@@ -328,6 +362,8 @@ export type Patronage = typeof patronage.$inferSelect;
 export type NewPatronage = typeof patronage.$inferInsert;
 export type Chat = typeof chats.$inferSelect;
 export type NewChat = typeof chats.$inferInsert;
+export type ChatPaidAudienceTier = typeof chatPaidAudienceTiers.$inferSelect;
+export type NewChatPaidAudienceTier = typeof chatPaidAudienceTiers.$inferInsert;
 export type ChatParticipant = typeof chatParticipants.$inferSelect;
 export type NewChatParticipant = typeof chatParticipants.$inferInsert;
 export type Message = typeof messages.$inferSelect;

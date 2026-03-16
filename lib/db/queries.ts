@@ -11,6 +11,7 @@ import {
   postPaidAudienceTiers,
   chats,
   chatParticipants,
+  chatPaidAudienceTiers,
   messages,
   notifications,
 } from "@/lib/db/schema";
@@ -813,6 +814,218 @@ export async function getChatsForUser(userId: string) {
   }
 }
 
+export async function getChatsForCreator(creatorId: string) {
+  try {
+    const creatorChats = await db
+      .select({ chat: chats })
+      .from(chats)
+      .where(eq(chats.creatorId, creatorId));
+
+    const chatIds = creatorChats.map((r) => r.chat.id);
+    if (chatIds.length === 0) return { data: [], error: null };
+
+    const lastMessages = await db
+      .select({
+        chatId: messages.chatId,
+        id: messages.id,
+        body: messages.body,
+        senderId: messages.senderId,
+        createdAt: messages.createdAt,
+      })
+      .from(messages)
+      .where(inArray(messages.chatId, chatIds))
+      .orderBy(desc(messages.createdAt));
+
+    const lastMessageByChat = new Map<string, (typeof lastMessages)[0]>();
+    for (const m of lastMessages) {
+      if (!lastMessageByChat.has(m.chatId)) lastMessageByChat.set(m.chatId, m);
+    }
+
+    const patronUserIds = creatorChats
+      .map((r) => r.chat.patronUserId)
+      .filter(Boolean) as string[];
+    const patronUsers =
+      patronUserIds.length > 0
+        ? await db
+            .select({
+              id: users.id,
+              ckbAddress: users.ckbAddress,
+              avatarUrl: users.avatarUrl,
+              creatorDisplayName: creators.displayName,
+            })
+            .from(users)
+            .leftJoin(creators, eq(creators.userId, users.id))
+            .where(inArray(users.id, patronUserIds))
+        : [];
+    const patronByUserId = new Map(
+      patronUsers.map((p) => [
+        p.id,
+        {
+          displayName: p.creatorDisplayName ?? `${p.ckbAddress.slice(0, 8)}…${p.ckbAddress.slice(-6)}`,
+          avatarUrl: p.avatarUrl,
+        },
+      ])
+    );
+
+    const data = creatorChats.map(({ chat }) => {
+      const lastMsg = lastMessageByChat.get(chat.id);
+      const patronInfo =
+        chat.type === "direct" && chat.patronUserId
+          ? patronByUserId.get(chat.patronUserId)
+          : null;
+      return {
+        chat,
+        lastMessage: lastMsg
+          ? { body: lastMsg.body, createdAt: lastMsg.createdAt }
+          : null,
+        patronDisplayName: patronInfo?.displayName ?? null,
+        patronAvatarUrl: patronInfo?.avatarUrl ?? null,
+      };
+    });
+
+    data.sort((a, b) => {
+      const aTime = a.lastMessage?.createdAt ?? a.chat.createdAt;
+      const bTime = b.lastMessage?.createdAt ?? b.chat.createdAt;
+      return bTime.getTime() - aTime.getTime();
+    });
+
+    return { data, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function createGroupChat(
+  creatorId: string,
+  options: { name?: string | null; audience?: "free" | "paid"; tierIds?: string[] }
+) {
+  try {
+    const [creator] = await db
+      .select({ userId: creators.userId })
+      .from(creators)
+      .where(eq(creators.id, creatorId))
+      .limit(1);
+    if (!creator) return { data: null, error: new Error("Creator not found") };
+
+    const [existing] = await db
+      .select()
+      .from(chats)
+      .where(and(eq(chats.creatorId, creatorId), eq(chats.type, "group")))
+      .limit(1);
+    if (existing) {
+      return { data: existing, error: new Error("Group chat already exists for this creator") };
+    }
+
+    const audience = options.audience ?? "free";
+    const [created] = await db
+      .insert(chats)
+      .values({
+        type: "group",
+        creatorId,
+        name: options.name ?? null,
+        audience: audience as "free" | "paid",
+      })
+      .returning();
+    if (!created) return { data: null, error: new Error("Failed to create chat") };
+
+    await db.insert(chatParticipants).values({
+      chatId: created.id,
+      userId: creator.userId,
+    });
+
+    if (audience === "paid" && options.tierIds?.length) {
+      await db.insert(chatPaidAudienceTiers).values(
+        options.tierIds.map((tierId) => ({ chatId: created.id, tierId }))
+      );
+    }
+
+    return { data: created, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+}
+
+export async function getGroupChatPaidAudienceTierIds(chatId: string) {
+  try {
+    const rows = await db
+      .select({ tierId: chatPaidAudienceTiers.tierId })
+      .from(chatPaidAudienceTiers)
+      .where(eq(chatPaidAudienceTiers.chatId, chatId));
+    return { data: rows.map((r) => r.tierId), error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function updateGroupChatAudience(
+  chatId: string,
+  audience: "free" | "paid",
+  tierIds: string[]
+) {
+  try {
+    await db
+      .update(chats)
+      .set({ audience: audience as "free" | "paid", updatedAt: new Date() })
+      .where(eq(chats.id, chatId));
+
+    await db.delete(chatPaidAudienceTiers).where(eq(chatPaidAudienceTiers.chatId, chatId));
+    if (audience === "paid" && tierIds.length > 0) {
+      await db.insert(chatPaidAudienceTiers).values(
+        tierIds.map((tierId) => ({ chatId, tierId }))
+      );
+    }
+    return { error: null };
+  } catch (error) {
+    console.error(error);
+    return { error: error as Error };
+  }
+}
+
+export async function canPatronAccessGroupChat(
+  chatId: string,
+  patronUserId: string
+): Promise<boolean> {
+  try {
+    const [row] = await db
+      .select({
+        audience: chats.audience,
+        creatorId: chats.creatorId,
+      })
+      .from(chats)
+      .where(eq(chats.id, chatId))
+      .limit(1);
+    if (!row) return false;
+    if (row.audience !== "paid") return true;
+
+    const tierRows = await db
+      .select({ tierId: chatPaidAudienceTiers.tierId })
+      .from(chatPaidAudienceTiers)
+      .where(eq(chatPaidAudienceTiers.chatId, chatId));
+    const allowedTierIds = new Set(tierRows.map((r) => r.tierId));
+    if (allowedTierIds.size === 0) return false;
+
+    const [patronTier] = await db
+      .select({ tierId: patronage.tierId, tierAmount: tiers.amount })
+      .from(patronage)
+      .innerJoin(tiers, eq(patronage.tierId, tiers.id))
+      .where(
+        and(
+          eq(patronage.creatorId, row.creatorId),
+          eq(patronage.patronUserId, patronUserId),
+          eq(patronage.status, "active")
+        )
+      )
+      .limit(1);
+    if (!patronTier) return false;
+    return allowedTierIds.has(patronTier.tierId);
+  } catch {
+    return false;
+  }
+}
+
 export async function getOrCreateGroupChat(creatorId: string, userId: string) {
   try {
     const [existing] = await db
@@ -822,6 +1035,11 @@ export async function getOrCreateGroupChat(creatorId: string, userId: string) {
       .limit(1);
 
     if (existing) {
+      const canAccess = await canPatronAccessGroupChat(existing.id, userId);
+      if (!canAccess) {
+        return { data: null, error: new Error("You don't have access to this paid group. Upgrade your membership.") };
+      }
+
       const [participant] = await db
         .select()
         .from(chatParticipants)
@@ -851,7 +1069,7 @@ export async function getOrCreateGroupChat(creatorId: string, userId: string) {
 
     const [created] = await db
       .insert(chats)
-      .values({ type: "group", creatorId })
+      .values({ type: "group", creatorId, audience: "free" })
       .returning();
     if (!created) return { data: null, error: new Error("Failed to create chat") };
 

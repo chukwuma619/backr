@@ -56,9 +56,10 @@ export async function POST(request: NextRequest) {
 
   const { data, error } = await getOrCreateGroupChat(creatorId, user.id);
   if (error) {
+    const status = error.message.includes("don't have access") ? 403 : 500;
     return NextResponse.json(
       { error: error.message },
-      { status: 500 }
+      { status }
     );
   }
   return NextResponse.json({ chat: data });
