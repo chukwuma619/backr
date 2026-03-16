@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCreatorBySlug } from "@/lib/db/queries";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
+import {
+  getCreatorBySlug,
+  getCreatorSubscriptionForUser,
+  getPatronagesByUserId,
+} from "@/lib/db/queries";
+import { SubscribeButton } from "@/components/creator/subscribe-button";
 import {
   Card,
   CardDescription,
@@ -16,10 +22,26 @@ type Props = {
 
 export default async function CreatorProfilePage({ params }: Props) {
   const { username } = await params;
-  const { data: creator } = await getCreatorBySlug(username);
+  const [user, { data: creator }] = await Promise.all([
+    getCurrentUser(),
+    getCreatorBySlug(username),
+  ]);
 
   if (!creator) {
     notFound();
+  }
+
+  let isSubscribed = false;
+  let isPatron = false;
+
+  if (user) {
+    const [{ data: subscription }, { data: patronages }] = await Promise.all([
+      getCreatorSubscriptionForUser(user.id, creator.id),
+      getPatronagesByUserId(user.id),
+    ]);
+
+    isSubscribed = !!subscription;
+    isPatron = patronages.some((p) => p.creatorId === creator.id);
   }
 
   return (
@@ -40,9 +62,18 @@ export default async function CreatorProfilePage({ params }: Props) {
                   {creator.bio}
                 </p>
               )}
-              <Button asChild size="sm" className="mt-4">
-                <Link href={`/c/${username}/membership`}>View membership</Link>
-              </Button>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/c/${username}/membership`}>View membership</Link>
+                </Button>
+                {user && (
+                  <SubscribeButton
+                    username={username}
+                    isSubscribed={isSubscribed}
+                    isPatron={isPatron}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </CardHeader>

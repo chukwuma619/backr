@@ -2,6 +2,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
 import { calculatePlatformFee } from "@/lib/platform-fee";
 import {
+  creatorSubscriptions,
   creators,
   creatortopics,
   tiers,
@@ -85,6 +86,28 @@ export async function getAllCreatorsForDiscovery(
       .from(creators)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(creators.createdAt));
+
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getSubscribersByCreatorId(creatorId: string) {
+  try {
+    const rows = await db
+      .select({
+        subscriptionId: creatorSubscriptions.id,
+        userId: users.id,
+        ckbAddress: users.ckbAddress,
+        avatarUrl: users.avatarUrl,
+        subscribedAt: creatorSubscriptions.createdAt,
+      })
+      .from(creatorSubscriptions)
+      .innerJoin(users, eq(creatorSubscriptions.userId, users.id))
+      .where(eq(creatorSubscriptions.creatorId, creatorId))
+      .orderBy(desc(creatorSubscriptions.createdAt));
 
     return { data: rows, error: null };
   } catch (error) {
@@ -202,6 +225,77 @@ export async function getCreatorTopicSlugs(creatorId: string) {
   } catch (error) {
     console.error(error);
     return { data: [], error: error as Error };
+  }
+}
+
+export async function getCreatorSubscriptionForUser(
+  userId: string,
+  creatorId: string
+) {
+  try {
+    const [row] = await db
+      .select()
+      .from(creatorSubscriptions)
+      .where(
+        and(
+          eq(creatorSubscriptions.userId, userId),
+          eq(creatorSubscriptions.creatorId, creatorId)
+        )
+      )
+      .limit(1);
+    return { data: row ?? null, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+}
+
+export async function subscribeToCreator(userId: string, creatorId: string) {
+  try {
+    const [existing] = await db
+      .select()
+      .from(creatorSubscriptions)
+      .where(
+        and(
+          eq(creatorSubscriptions.userId, userId),
+          eq(creatorSubscriptions.creatorId, creatorId)
+        )
+      )
+      .limit(1);
+    if (existing) {
+      return { data: existing, error: null };
+    }
+
+    const [created] = await db
+      .insert(creatorSubscriptions)
+      .values({
+        userId,
+        creatorId,
+      })
+      .onConflictDoNothing()
+      .returning();
+
+    return { data: created ?? existing ?? null, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+}
+
+export async function unsubscribeFromCreator(userId: string, creatorId: string) {
+  try {
+    await db
+      .delete(creatorSubscriptions)
+      .where(
+        and(
+          eq(creatorSubscriptions.userId, userId),
+          eq(creatorSubscriptions.creatorId, creatorId)
+        )
+      );
+    return { error: null };
+  } catch (error) {
+    console.error(error);
+    return { error: error as Error };
   }
 }
 

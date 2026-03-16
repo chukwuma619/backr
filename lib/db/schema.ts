@@ -1,11 +1,4 @@
-import {
-  integer,
-  pgTable,
-  text,
-  timestamp,
-  unique,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
@@ -48,6 +41,21 @@ export const creators = pgTable("creators", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const creatorSubscriptions = pgTable(
+  "creator_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    creatorId: uuid("creator_id")
+      .notNull()
+      .references(() => creators.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.userId, t.creatorId)]
+);
 
 export const creatortopics = pgTable(
   "creator_topics",
@@ -214,6 +222,7 @@ export const patronage = pgTable("patronage", {
 
 export const usersRelations = relations(users, ({ one, many }) => ({
   creator: one(creators),
+  subscriptions: many(creatorSubscriptions),
   notifications: many(notifications),
 }));
 
@@ -221,11 +230,26 @@ export const creatorsRelations = relations(creators, ({ one, many }) => ({
   user: one(users, { fields: [creators.userId], references: [users.id] }),
   topics: many(creatortopics),
   tiers: many(tiers),
+  subscriptions: many(creatorSubscriptions),
   patronage: many(patronage),
   posts: many(posts),
   chats: many(chats),
   notifications: many(notifications),
 }));
+
+export const creatorSubscriptionsRelations = relations(
+  creatorSubscriptions,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [creatorSubscriptions.userId],
+      references: [users.id],
+    }),
+    creator: one(creators, {
+      fields: [creatorSubscriptions.creatorId],
+      references: [creators.id],
+    }),
+  })
+);
 
 export const creatortopicsRelations = relations(creatortopics, ({ one }) => ({
   creator: one(creators, {

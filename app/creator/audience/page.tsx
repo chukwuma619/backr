@@ -1,5 +1,5 @@
 import { getCreatorForDashboard } from "@/lib/creators/get-creator-for-dashboard";
-import { getPatronsByCreatorId } from "@/lib/db/queries";
+import { getSubscribersByCreatorId } from "@/lib/db/queries";
 import {
   Card,
   CardContent,
@@ -34,7 +34,7 @@ export default async function CreatorAudiencePage() {
   const { creator } = await getCreatorForDashboard();
   if (!creator) return null;
 
-  const { data: patrons } = await getPatronsByCreatorId(creator.id);
+  const { data: subscribers } = await getSubscribersByCreatorId(creator.id);
 
   return (
     <div className="space-y-6">
@@ -48,47 +48,43 @@ export default async function CreatorAudiencePage() {
         <CardHeader>
           <CardTitle>Supporters</CardTitle>
           <CardDescription>
-            {patrons?.length ?? 0} active supporter
-            {(patrons?.length ?? 0) !== 1 ? "s" : ""}
+            {subscribers?.length ?? 0} active subscriber
+            {(subscribers?.length ?? 0) !== 1 ? "s" : ""}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!patrons?.length ? (
+          {!subscribers?.length ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
-              No supporters yet. Share your page to grow your audience.
+              No subscribers yet. Share your page to grow your audience.
             </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Supporter</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Amount</TableHead>
+                  <TableHead>Subscriber</TableHead>
                   <TableHead className="text-right">Joined</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {patrons.map((patron) => (
-                  <TableRow key={patron.patronUserId}>
+                {subscribers.map((subscriber) => (
+                  <TableRow key={subscriber.subscriptionId}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="size-8">
                           <AvatarImage
-                            src={patron.patronAvatarUrl ?? undefined}
+                            src={subscriber.avatarUrl ?? undefined}
                           />
                           <AvatarFallback className="text-xs">
-                            {patron.patronCkbAddress.slice(0, 2).toUpperCase()}
+                            {subscriber.ckbAddress.slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <span className="font-mono text-sm">
-                          {formatAddress(patron.patronCkbAddress)}
+                          {formatAddress(subscriber.ckbAddress)}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>{patron.tierName}</TableCell>
-                    <TableCell>${patron.tierAmount}</TableCell>
                     <TableCell className="text-right text-muted-foreground">
-                      {formatDate(patron.subscribedAt)}
+                      {formatDate(subscriber.subscribedAt)}
                     </TableCell>
                   </TableRow>
                 ))}
