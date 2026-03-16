@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
-import { MessageCircle, Users, Send, Lock, Globe } from "lucide-react";
+import { MessageCircle, Users, Send, Lock, Globe, MessageCirclePlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,7 +12,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -25,6 +24,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuTrigger } from "../ui/dropdown-menu";
 
 type CreatorChatItem = {
   chat: {
@@ -34,6 +34,7 @@ type CreatorChatItem = {
     patronUserId: string | null;
     name: string | null;
     audience: string | null;
+    imageUrl: string | null;
     createdAt: Date;
   };
   lastMessage: { body: string; createdAt: Date } | null;
@@ -86,10 +87,13 @@ export function CreatorChatsSection({
   const [groupName, setGroupName] = useState("");
   const [groupAudience, setGroupAudience] = useState<"free" | "paid">("free");
   const [groupMinTierId, setGroupMinTierId] = useState("");
+  const [groupImageUrl, setGroupImageUrl] = useState("");
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [startingDM, setStartingDM] = useState(false);
+  const [selectedChatType, setSelectedChatType] = useState<"group" | "direct">("group");
 
   const selectedChat = chats.find((c) => c.chat.id === selectedChatId);
+  const filteredChats = chats.filter((c) => c.chat.type === selectedChatType);
   const directChatPatronIds = new Set(
     chats.filter((c) => c.chat.type === "direct").map((c) => c.chat.patronUserId).filter(Boolean) as string[]
   );
@@ -198,6 +202,7 @@ export function CreatorChatsSection({
           name: groupName.trim() || undefined,
           audience: groupAudience,
           minTierId: groupAudience === "paid" ? groupMinTierId || undefined : undefined,
+          imageUrl: groupImageUrl.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -227,6 +232,7 @@ export function CreatorChatsSection({
       setGroupName("");
       setGroupAudience("free");
       setGroupMinTierId("");
+      setGroupImageUrl("");
       setCreateGroupOpen(false);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to create group");
@@ -247,18 +253,36 @@ export function CreatorChatsSection({
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-12rem)] min-h-[400px] rounded-lg border bg-card">
+    <div className="flex flex-col h-[calc(100vh-12rem)] min-h-[400px] ">
       <div className="flex flex-1 min-h-0">
-        <aside className="w-72 border-r flex flex-col shrink-0">
-          <div className="p-3 border-b flex items-center justify-between gap-2">
-            <h2 className="font-semibold text-sm">Conversations</h2>
+        <aside className="w-92 border-r flex flex-col shrink-0">
+          <div className="p-3 flex items-center justify-between gap-2">
+            <h2 className="font-semibold text-lg">Chats</h2>
             <div className="flex gap-1">
-              <Dialog open={newDMOpen} onOpenChange={setNewDMOpen}>
-                <DialogTrigger asChild>
-                  <Button size="icon-xs" variant="ghost" title="New DM">
-                    <MessageCircle className="size-3.5" />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="icon-xs" variant="ghost" title="New conversation">
+                    <MessageCirclePlus className="size-3.5" />
                   </Button>
-                </DialogTrigger>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onSelect={() => setNewDMOpen(true)}
+                    disabled={patronsWithoutDM.length === 0}
+                  >
+                    <MessageCircle className="size-4 mr-2" />
+                    New Direct Message
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => setCreateGroupOpen(true)}
+                    disabled={hasGroup}
+                  >
+                    <Users className="size-4 mr-2" />
+                    New Group Chat
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Dialog open={newDMOpen} onOpenChange={setNewDMOpen}>
                 <DialogContent className="sm:max-w-sm">
                   <DialogHeader>
                     <DialogTitle>Message a supporter</DialogTitle>
@@ -302,16 +326,6 @@ export function CreatorChatsSection({
                 </DialogContent>
               </Dialog>
               <Dialog open={createGroupOpen} onOpenChange={setCreateGroupOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    size="icon-xs"
-                    variant="ghost"
-                    title="New group"
-                    disabled={hasGroup}
-                  >
-                    <Users className="size-3.5" />
-                  </Button>
-                </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle>Create group chat</DialogTitle>
@@ -325,6 +339,16 @@ export function CreatorChatsSection({
                         value={groupName}
                         onChange={(e) => setGroupName(e.target.value)}
                         required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="group-image-url">Profile image (optional)</Label>
+                      <Input
+                        id="group-image-url"
+                        type="url"
+                        placeholder="https://..."
+                        value={groupImageUrl}
+                        onChange={(e) => setGroupImageUrl(e.target.value)}
                       />
                     </div>
                     <div className="space-y-3">
@@ -396,9 +420,27 @@ export function CreatorChatsSection({
               </Dialog>
             </div>
           </div>
+          <div className="flex items-center  gap-1 p-2">
+            <Button
+              variant={selectedChatType === "group" ? "default" : "outline"}
+              size="sm"
+            
+              onClick={() => setSelectedChatType("group")}
+            >
+              Groups
+            </Button>
+            <Button
+              variant={selectedChatType === "direct" ? "default" : "outline"}
+              size="sm"
+           
+              onClick={() => setSelectedChatType("direct")}
+            >
+              Direct messages
+            </Button>
+          </div>
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
-              {chats.map((item) => (
+              {filteredChats.map((item) => (
                 <button
                   key={item.chat.id}
                   type="button"
@@ -411,6 +453,8 @@ export function CreatorChatsSection({
                   <Avatar size="sm" className="size-9 shrink-0">
                     {item.chat.type === "direct" && item.patronAvatarUrl ? (
                       <AvatarImage src={item.patronAvatarUrl} />
+                    ) : item.chat.type === "group" && item.chat.imageUrl ? (
+                      <AvatarImage src={item.chat.imageUrl} />
                     ) : null}
                     <AvatarFallback>
                       {item.chat.type === "direct"
@@ -442,13 +486,15 @@ export function CreatorChatsSection({
           </ScrollArea>
         </aside>
 
-        <main className="flex-1 flex flex-col min-w-0">
+        <main className="flex-1 flex flex-col min-w-0 rounded-lg h-full bg-card">
           {selectedChat ? (
             <>
               <div className="p-3 border-b flex items-center gap-2">
                 <Avatar size="sm" className="size-8 shrink-0">
                   {selectedChat.chat.type === "direct" && selectedChat.patronAvatarUrl ? (
                     <AvatarImage src={selectedChat.patronAvatarUrl} />
+                  ) : selectedChat.chat.type === "group" && selectedChat.chat.imageUrl ? (
+                    <AvatarImage src={selectedChat.chat.imageUrl} />
                   ) : null}
                   <AvatarFallback>
                     {selectedChat.chat.type === "direct"
@@ -576,24 +622,7 @@ export function CreatorChatsSection({
               <p className="text-sm text-muted-foreground max-w-sm mb-4">
                 Message supporters in direct chats or create a group (free or paid) for your community.
               </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setNewDMOpen(true)}
-                  disabled={patronsWithoutDM.length === 0}
-                >
-                  <MessageCircle className="size-4 mr-2" />
-                  New DM
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setCreateGroupOpen(true)}
-                  disabled={hasGroup}
-                >
-                  <Users className="size-4 mr-2" />
-                  New group
-                </Button>
-              </div>
+
             </div>
           )}
         </main>

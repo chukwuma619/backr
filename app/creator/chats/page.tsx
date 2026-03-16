@@ -56,13 +56,7 @@ export default async function CreatorChatsPage({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Chats</h1>
-        <p className="text-muted-foreground">
-          Manage conversations with your supporters. Message them directly or
-          create a free or paid group chat.
-        </p>
-      </div>
+      
       <CreatorChatsSection
         initialChats={chatItems}
         patrons={patronItems}

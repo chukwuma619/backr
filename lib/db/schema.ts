@@ -131,6 +131,7 @@ export const chats = pgTable("chats", {
   }),
   name: text("name"), // display name for group chats
   audience: text("audience").$type<ChatAudience>(), // free | paid for group chats
+  imageUrl: text("image_url"), // optional profile image for group chats
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

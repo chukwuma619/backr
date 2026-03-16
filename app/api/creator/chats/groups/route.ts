@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Creator not found" }, { status: 403 });
   }
 
-  let body: { name?: unknown; audience?: unknown; minTierId?: unknown };
+  let body: { name?: unknown; audience?: unknown; minTierId?: unknown; imageUrl?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -29,6 +29,8 @@ export async function POST(request: NextRequest) {
     body.audience === "paid" || body.audience === "free" ? body.audience : "free";
   const minTierId =
     typeof body.minTierId === "string" ? body.minTierId.trim() : "";
+  const imageUrl =
+    typeof body.imageUrl === "string" ? body.imageUrl.trim() || null : null;
 
   let tierIds: string[] = [];
   if (audience === "paid" && minTierId) {
@@ -43,6 +45,7 @@ export async function POST(request: NextRequest) {
     name,
     audience,
     tierIds: tierIds.length > 0 ? tierIds : undefined,
+    imageUrl,
   });
 
   if (error) {

@@ -898,7 +898,12 @@ export async function getChatsForCreator(creatorId: string) {
 
 export async function createGroupChat(
   creatorId: string,
-  options: { name?: string | null; audience?: "free" | "paid"; tierIds?: string[] }
+  options: {
+    name?: string | null;
+    audience?: "free" | "paid";
+    tierIds?: string[];
+    imageUrl?: string | null;
+  }
 ) {
   try {
     const [creator] = await db
@@ -918,6 +923,10 @@ export async function createGroupChat(
     }
 
     const audience = options.audience ?? "free";
+    const imageUrl =
+      typeof options.imageUrl === "string" && options.imageUrl.trim()
+        ? options.imageUrl.trim()
+        : null;
     const [created] = await db
       .insert(chats)
       .values({
@@ -925,6 +934,7 @@ export async function createGroupChat(
         creatorId,
         name: options.name ?? null,
         audience: audience as "free" | "paid",
+        imageUrl,
       })
       .returning();
     if (!created) return { data: null, error: new Error("Failed to create chat") };
