@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import {
   getMessagesByChatId,
-  canUserAccessChat,
+  getChatMessageAccessForUser,
   sendMessage,
   getChatById,
   createNotificationsForNewMessage,
@@ -18,8 +18,18 @@ export async function GET(
   }
 
   const { chatId } = await params;
-  const canAccess = await canUserAccessChat(chatId, user.id);
-  if (!canAccess) {
+  const access = await getChatMessageAccessForUser(chatId, user.id);
+  if (!access.allowed) {
+    if (access.denialCode === "upgrade_required") {
+      return NextResponse.json(
+        {
+          error:
+            "Upgrade your membership to access this community chat.",
+          code: "UPGRADE_REQUIRED",
+        },
+        { status: 403 }
+      );
+    }
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -44,8 +54,18 @@ export async function POST(
   }
 
   const { chatId } = await params;
-  const canAccess = await canUserAccessChat(chatId, user.id);
-  if (!canAccess) {
+  const access = await getChatMessageAccessForUser(chatId, user.id);
+  if (!access.allowed) {
+    if (access.denialCode === "upgrade_required") {
+      return NextResponse.json(
+        {
+          error:
+            "Upgrade your membership to access this community chat.",
+          code: "UPGRADE_REQUIRED",
+        },
+        { status: 403 }
+      );
+    }
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

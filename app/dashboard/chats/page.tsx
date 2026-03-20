@@ -32,6 +32,9 @@ export default async function ChatsPage({
             createdAt: c.lastMessage.createdAt,
           }
         : null,
+      isParticipant: c.isParticipant,
+      canAccessMessages: c.canAccessMessages,
+      canJoinGroup: c.canJoinGroup,
     })) ?? [];
 
   const patronageItems =

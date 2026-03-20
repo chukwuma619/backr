@@ -946,37 +946,107 @@ export async function getChatsForUser(userId: string) {
       }
     }
 
-    const chatIds = Array.from(deduped.keys());
-    const lastMessages = await db
-      .select({
-        chatId: messages.chatId,
-        id: messages.id,
-        body: messages.body,
-        senderId: messages.senderId,
-        createdAt: messages.createdAt,
-      })
-      .from(messages)
-      .where(inArray(messages.chatId, chatIds))
-      .orderBy(desc(messages.createdAt));
-
-    const lastMessageByChat = new Map<string, (typeof lastMessages)[0]>();
-    for (const m of lastMessages) {
-      if (!lastMessageByChat.has(m.chatId)) {
-        lastMessageByChat.set(m.chatId, m);
+    const groupChatsForCreators = await db
+      .select()
+      .from(chats)
+      .where(
+        and(inArray(chats.creatorId, allCreatorIds), eq(chats.type, "group"))
+      );
+    for (const g of groupChatsForCreators) {
+      if (!deduped.has(g.id)) {
+        deduped.set(g.id, g);
       }
     }
 
-    const data = Array.from(deduped.values()).map((chat) => {
-      const meta = patronageByCreator.get(chat.creatorId)!;
-      const lastMsg = lastMessageByChat.get(chat.id);
-      return {
-        chat,
-        creatorDisplayName: meta.creatorDisplayName,
-        creatorUsername: meta.creatorUsername,
-        creatorAvatarUrl: meta.creatorAvatarUrl,
-        lastMessage: lastMsg ?? null,
-      };
+    const allChatIds = Array.from(deduped.keys());
+    if (allChatIds.length === 0) return { data: [], error: null };
+
+    const participantRows = await db
+      .select({ chatId: chatParticipants.chatId })
+      .from(chatParticipants)
+      .where(
+        and(
+          eq(chatParticipants.userId, userId),
+          inArray(chatParticipants.chatId, allChatIds)
+        )
+      );
+    const participantSet = new Set(participantRows.map((r) => r.chatId));
+
+    const accessByChatId = new Map<
+      string,
+      { isParticipant: boolean; canAccessMessages: boolean; canJoinGroup: boolean }
+    >();
+    await Promise.all(
+      allChatIds.map(async (chatId) => {
+        const chat = deduped.get(chatId)!;
+        const isParticipant = participantSet.has(chatId);
+        const canAccessMessages = await canUserAccessChat(chatId, userId);
+        const canJoinGroup =
+          !isParticipant &&
+          chat.type === "group" &&
+          (chat.audience !== "paid" ||
+            (await canPatronAccessGroupChat(chatId, userId)));
+        accessByChatId.set(chatId, {
+          isParticipant,
+          canAccessMessages,
+          canJoinGroup,
+        });
+      })
+    );
+
+    const chatIdsForPreview = allChatIds.filter((id) => {
+      const a = accessByChatId.get(id)!;
+      return a.isParticipant && a.canAccessMessages;
     });
+
+    const lastMessageByChat = new Map<
+      string,
+      {
+        chatId: string;
+        id: string;
+        body: string;
+        senderId: string;
+        createdAt: Date;
+      }
+    >();
+    if (chatIdsForPreview.length > 0) {
+      const lastMessages = await db
+        .select({
+          chatId: messages.chatId,
+          id: messages.id,
+          body: messages.body,
+          senderId: messages.senderId,
+          createdAt: messages.createdAt,
+        })
+        .from(messages)
+        .where(inArray(messages.chatId, chatIdsForPreview))
+        .orderBy(desc(messages.createdAt));
+
+      for (const m of lastMessages) {
+        if (!lastMessageByChat.has(m.chatId)) {
+          lastMessageByChat.set(m.chatId, m);
+        }
+      }
+    }
+
+    const data = Array.from(deduped.values())
+      .map((chat) => {
+        const meta = patronageByCreator.get(chat.creatorId);
+        if (!meta) return null;
+        const access = accessByChatId.get(chat.id)!;
+        const lastMsg = lastMessageByChat.get(chat.id);
+        return {
+          chat,
+          creatorDisplayName: meta.creatorDisplayName,
+          creatorUsername: meta.creatorUsername,
+          creatorAvatarUrl: meta.creatorAvatarUrl,
+          lastMessage: lastMsg ?? null,
+          isParticipant: access.isParticipant,
+          canAccessMessages: access.canAccessMessages,
+          canJoinGroup: access.canJoinGroup,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null);
 
     data.sort((a, b) => {
       const aTime = a.lastMessage?.createdAt ?? a.chat.createdAt;
@@ -1364,7 +1434,13 @@ export async function getChatById(chatId: string) {
   }
 }
 
-export async function canUserAccessChat(chatId: string, userId: string) {
+export async function getChatMessageAccessForUser(
+  chatId: string,
+  userId: string
+): Promise<
+  | { allowed: true }
+  | { allowed: false; denialCode: "not_participant" | "upgrade_required" }
+> {
   try {
     const [participant] = await db
       .select()
@@ -1376,10 +1452,52 @@ export async function canUserAccessChat(chatId: string, userId: string) {
         )
       )
       .limit(1);
-    return !!participant;
+    if (!participant) {
+      return { allowed: false, denialCode: "not_participant" };
+    }
+
+    const [chat] = await db
+      .select()
+      .from(chats)
+      .where(eq(chats.id, chatId))
+      .limit(1);
+    if (!chat) {
+      return { allowed: false, denialCode: "not_participant" };
+    }
+
+    const [creatorRow] = await db
+      .select({ ownerUserId: creators.userId })
+      .from(creators)
+      .where(eq(creators.id, chat.creatorId))
+      .limit(1);
+    if (creatorRow?.ownerUserId === userId) {
+      return { allowed: true };
+    }
+
+    if (chat.type === "direct") {
+      return { allowed: true };
+    }
+
+    if (chat.type === "group") {
+      if (chat.audience !== "paid") {
+        return { allowed: true };
+      }
+      const tierOk = await canPatronAccessGroupChat(chatId, userId);
+      if (tierOk) {
+        return { allowed: true };
+      }
+      return { allowed: false, denialCode: "upgrade_required" };
+    }
+
+    return { allowed: true };
   } catch {
-    return false;
+    return { allowed: false, denialCode: "not_participant" };
   }
+}
+
+export async function canUserAccessChat(chatId: string, userId: string) {
+  const result = await getChatMessageAccessForUser(chatId, userId);
+  return result.allowed;
 }
 
 export async function sendMessage(chatId: string, senderId: string, body: string) {
@@ -1410,6 +1528,17 @@ export async function addPatronToGroupChat(creatorId: string, patronUserId: stri
       .limit(1);
 
     if (!chat) return { error: new Error("Group chat not found") };
+
+    if (chat.audience === "paid") {
+      const canAccess = await canPatronAccessGroupChat(chat.id, patronUserId);
+      if (!canAccess) {
+        return {
+          error: new Error(
+            "Patron's tier does not include access to this paid community chat"
+          ),
+        };
+      }
+    }
 
     const [existing] = await db
       .select()
