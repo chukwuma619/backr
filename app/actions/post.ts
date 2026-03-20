@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { posts, postPaidAudienceTiers, tiers } from "@/lib/db/schema";
+import { setPostCollections } from "@/lib/db/queries";
+import { creators, posts, postPaidAudienceTiers, tiers } from "@/lib/db/schema";
 
 
 export async function createPost(
@@ -220,7 +221,25 @@ export async function updatePostWithSettings(
 
   const { title, body, audience, minTierId } = parsed.data;
 
+  const collectionIdsRaw = formData.getAll("collectionIds") as string[];
+  const collectionIds = [
+    ...new Set(
+      collectionIdsRaw
+        .map((s) => parseInt(String(s), 10))
+        .filter((n) => Number.isFinite(n) && n >= 1)
+    ),
+  ];
+
   try {
+    const [postRow] = await db
+      .select({ creatorId: posts.creatorId })
+      .from(posts)
+      .where(eq(posts.id, postId))
+      .limit(1);
+    if (!postRow) {
+      return { data: null, error: { message: "Post not found" } };
+    }
+
     await db
       .update(posts)
       .set({
@@ -234,25 +253,36 @@ export async function updatePostWithSettings(
     await db.delete(postPaidAudienceTiers).where(eq(postPaidAudienceTiers.postId, postId));
 
     if (audience === "paid" && minTierId) {
-      const [post] = await db
-        .select({ creatorId: posts.creatorId })
-        .from(posts)
-        .where(eq(posts.id, postId))
-        .limit(1);
-      if (post) {
-        const tierIds =
-          minTierId === "all"
-            ? (await db.select({ id: tiers.id }).from(tiers).where(eq(tiers.creatorId, post.creatorId))).map((t) => t.id)
-            : [minTierId];
-        if (tierIds.length > 0) {
-          await db.insert(postPaidAudienceTiers).values(
-            tierIds.map((tierId) => ({ postId, tierId }))
-          );
-        }
+      const tierIds =
+        minTierId === "all"
+          ? (await db.select({ id: tiers.id }).from(tiers).where(eq(tiers.creatorId, postRow.creatorId))).map((t) => t.id)
+          : [minTierId];
+      if (tierIds.length > 0) {
+        await db.insert(postPaidAudienceTiers).values(
+          tierIds.map((tierId) => ({ postId, tierId }))
+        );
       }
     }
 
+    const membership = await setPostCollections(
+      postId,
+      postRow.creatorId,
+      collectionIds
+    );
+    if (!membership.ok) {
+      return { data: null, error: { message: membership.error } };
+    }
+
     revalidatePath("/creator/post");
+    const [creator] = await db
+      .select({ username: creators.username })
+      .from(creators)
+      .where(eq(creators.id, postRow.creatorId))
+      .limit(1);
+    if (creator) {
+      revalidatePath(`/c/${creator.username}`);
+      revalidatePath(`/c/${creator.username}/collections`);
+    }
     return { data: null, error: null };
   } catch (error) {
     console.error(error);

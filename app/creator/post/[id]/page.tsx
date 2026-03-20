@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { getCreatorForDashboard } from "@/lib/creators/get-creator-for-dashboard";
 import {
+  getCreatorCollectionsByCreatorId,
   getPostById,
+  getPostCollectionIds,
   getPostPaidAudienceTierIds,
   getTiersByCreatorId,
 } from "@/lib/db/queries";
@@ -29,9 +31,16 @@ export default async function CreatorPostDetailPage({ params }: Props) {
     return notFound();
   }
 
-  const [{ data: paidTierIds = [] }, { data: tiers = [] }] = await Promise.all([
+  const [
+    { data: paidTierIds = [] },
+    { data: tiers = [] },
+    { data: collections = [] },
+    { data: postCollectionIds },
+  ] = await Promise.all([
     getPostPaidAudienceTierIds(post.id),
     getTiersByCreatorId(creator.id),
+    getCreatorCollectionsByCreatorId(creator.id),
+    getPostCollectionIds(post.id),
   ]);
 
   return (
@@ -39,6 +48,8 @@ export default async function CreatorPostDetailPage({ params }: Props) {
       post={post}
       tiers={tiers ?? []}
       paidAudienceTierIds={paidTierIds ?? []}
+      collections={collections.map((c) => ({ id: c.id, name: c.name }))}
+      postCollectionIds={postCollectionIds ?? []}
       header={
         <div className="flex flex-col sm:flex-row flex-wrap justify-between items-stretch sm:items-center gap-3">
           <Button type="button" variant="ghost" asChild className="self-start">

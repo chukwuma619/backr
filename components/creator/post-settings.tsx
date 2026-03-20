@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { Control } from "react-hook-form";
 import type { PostEditorFormValues } from "@/lib/creator/post-editor-types";
 import { Controller, useForm } from "react-hook-form";
@@ -19,6 +20,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Globe, Lock } from "lucide-react";
@@ -37,13 +39,74 @@ type FormValues = z.infer<typeof formSchema>;
 type PostSettingsFieldsProps = {
   control: Control<PostEditorFormValues>;
   tiers: { id: string; name: string; amount: string }[];
+  collections: { id: number; name: string }[];
 };
 
-export function PostSettingsFields({ control, tiers }: PostSettingsFieldsProps) {
+export function PostSettingsFields({
+  control,
+  tiers,
+  collections,
+}: PostSettingsFieldsProps) {
   return (
     <aside className="w-full lg:w-80 shrink-0 min-w-0 pt-6 lg:pt-0 lg:border-l lg:pl-4 lg:h-full">
       <p className="text-lg font-medium border-b pb-3 mb-3">Settings</p>
       <div className="space-y-6">
+        <Controller
+          control={control}
+          name="collectionIds"
+          render={({ field }) => (
+            <Field>
+              <FieldLabel className="text-base">Collections</FieldLabel>
+              <FieldDescription className="text-xs">
+                Optional. Show this post in one or more collections on your public
+                profile.
+              </FieldDescription>
+              {collections.length === 0 ? (
+                <p className="text-muted-foreground mt-2 text-sm">
+                  <Link
+                    href="/creator/collections"
+                    className="text-primary font-medium underline-offset-4 hover:underline"
+                  >
+                    Create a collection
+                  </Link>{" "}
+                  to group posts.
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-2" id="post-collections">
+                  {collections.map((c) => {
+                    const idStr = String(c.id);
+                    const checked = field.value.includes(idStr);
+                    return (
+                      <li key={c.id} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`post-collection-${c.id}`}
+                          checked={checked}
+                          onCheckedChange={(v) => {
+                            if (v === true) {
+                              field.onChange(
+                                [...new Set([...field.value, idStr])]
+                              );
+                            } else {
+                              field.onChange(
+                                field.value.filter((x) => x !== idStr)
+                              );
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor={`post-collection-${c.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          {c.name}
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Field>
+          )}
+        />
         <Controller
           control={control}
           name="audience"

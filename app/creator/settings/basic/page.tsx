@@ -22,6 +22,7 @@ export default async function BasicSettingsPage() {
           displayName: creator.displayName,
           bio: creator.bio,
           avatarUrl: creator.avatarUrl ?? null,
+          coverImageUrl: creator.coverImageUrl ?? null,
           fiberNodeRpcUrl: creator.fiberNodeRpcUrl ?? null,
           nostrPubkey: creator.nostrPubkey ?? null,
           topicSlugs: topicSlugs ?? [],

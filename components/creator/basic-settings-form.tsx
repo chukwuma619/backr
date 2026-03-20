@@ -49,6 +49,7 @@ const schema = z.object({
   bio: z.string().max(1000).optional(),
   category: z.string().optional(),
   avatarUrl: z.string().max(500).optional(),
+  coverImageUrl: z.string().max(500).optional(),
   fiberNodeRpcUrl: z.union([z.string().url(), z.literal("")]).optional(),
 });
 
@@ -62,6 +63,7 @@ type BasicSettingsFormProps = {
     displayName: string;
     bio: string | null;
     avatarUrl?: string | null;
+    coverImageUrl?: string | null;
     fiberNodeRpcUrl?: string | null;
     nostrPubkey?: string | null;
     topicSlugs: string[];
@@ -84,6 +86,7 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
       bio: data.bio ?? "",
       category: data.topicSlugs[0] ?? CATEGORY_NONE,
       avatarUrl: data.avatarUrl ?? "",
+      coverImageUrl: data.coverImageUrl ?? "",
       fiberNodeRpcUrl: data.fiberNodeRpcUrl ?? "",
     },
   });
@@ -97,6 +100,8 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
     if (values.category && values.category !== CATEGORY_NONE)
       formData.set("topics", JSON.stringify([values.category]));
     if (values.avatarUrl) formData.set("avatarUrl", values.avatarUrl.trim());
+    if (values.coverImageUrl)
+      formData.set("coverImageUrl", values.coverImageUrl.trim());
     if (values.fiberNodeRpcUrl)
       formData.set("fiberNodeRpcUrl", values.fiberNodeRpcUrl.trim());
 
@@ -257,6 +262,30 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
                     {...field}
                     aria-invalid={fieldState.invalid}
                   />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+            <Controller
+              control={form.control}
+              name="coverImageUrl"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="basic-settings-coverImageUrl">
+                    Public cover image URL (optional)
+                  </FieldLabel>
+                  <Input
+                    id="basic-settings-coverImageUrl"
+                    type="url"
+                    placeholder="https://..."
+                    {...field}
+                    aria-invalid={fieldState.invalid}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Shown on your public profile at /c/{form.watch("slug") || "username"}
+                  </p>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}

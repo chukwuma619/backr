@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   LayoutDashboard,
   FileText,
+  FolderKanban,
   MessageCircle,
   Settings,
 Bell,
@@ -26,6 +27,7 @@ import { NavUser } from "@/components/dashboard/nav-user";
 const creatorNavItems = [
   { title: "Overview", url: "/creator", icon: LayoutDashboard },
   { title: "Posts", url: "/creator/post", icon: FileText },
+  { title: "Collections", url: "/creator/collections", icon: FolderKanban },
   { title: "Audience", url: "/creator/audience", icon: Users },
   { title: "Payouts", url: "/creator/payouts", icon: Banknote },
   { title: "Chats", url: "/creator/chats", icon: MessageCircle },

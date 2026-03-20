@@ -18,6 +18,7 @@ const formSchema = z.object({
   body: z.string().min(1, "Content is required").max(50000),
   audience: z.enum(["free", "paid"]),
   minTierId: z.string(),
+  collectionIds: z.array(z.string()),
 }) satisfies z.ZodType<PostEditorFormValues>;
 
 function defaultMinTierId(
@@ -38,6 +39,8 @@ type PostEditorProps = {
   post: Post;
   tiers: { id: string; name: string; amount: string }[];
   paidAudienceTierIds: string[];
+  collections: { id: number; name: string }[];
+  postCollectionIds: number[];
   header?: React.ReactNode;
 };
 
@@ -45,6 +48,8 @@ export function PostEditor({
   post,
   tiers,
   paidAudienceTierIds,
+  collections,
+  postCollectionIds,
   header,
 }: PostEditorProps) {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -57,6 +62,7 @@ export function PostEditor({
       body: post.content ?? "",
       audience: (post.audience ?? "free") as "free" | "paid",
       minTierId: defaultMinTierId(post.audience ?? null, paidAudienceTierIds, tiers),
+      collectionIds: postCollectionIds.map(String),
     },
   });
 
@@ -76,6 +82,7 @@ export function PostEditor({
       formData.set("body", values.body.trim());
       formData.set("audience", values.audience);
       formData.set("minTierId", values.audience === "paid" ? values.minTierId : "");
+      values.collectionIds.forEach((id) => formData.append("collectionIds", id));
 
       setSaveStatus("saving");
       const { error } = await updatePostWithSettings(post.id, formData);
@@ -105,7 +112,11 @@ export function PostEditor({
         )}
         <PostFormFields control={form.control} />
       </div>
-      <PostSettingsFields control={form.control} tiers={tiers} />
+        <PostSettingsFields
+          control={form.control}
+          tiers={tiers}
+          collections={collections}
+        />
     </div>
   );
 }

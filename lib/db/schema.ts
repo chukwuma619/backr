@@ -1,4 +1,12 @@
-import { integer, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import {
+  integer,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  unique,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
@@ -38,6 +46,7 @@ export const creators = pgTable("creators", {
   username: text("username").notNull().unique(),
   displayName: text("display_name").notNull(),
   bio: text("bio"),
+  coverImageUrl: text("cover_image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -72,6 +81,33 @@ export const creatortopics = pgTable(
   (t) => [unique().on(t.creatorId, t.slug)]
 );
 
+export const creatorCollections = pgTable("creator_collections", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  creatorId: uuid("creator_id")
+    .notNull()
+    .references(() => creators.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  coverImageUrl: text("cover_image_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+/** A post may appear in zero or more collections. */
+export const creatorCollectionPosts = pgTable(
+  "creator_collection_posts",
+  {
+    collectionId: integer("collection_id")
+      .notNull()
+      .references(() => creatorCollections.id, { onDelete: "cascade" }),
+    postId: integer("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.collectionId, table.postId] })]
+);
+
 export const tiers = pgTable("tiers", {
   id: uuid("id").primaryKey().defaultRandom(),
   creatorId: uuid("creator_id")
@@ -98,6 +134,7 @@ export const posts = pgTable("posts", {
     .references(() => creators.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   content: text("content"),
+  coverImageUrl: text("cover_image_url"),
   status: text("status")
     .notNull()
     .$type<PostStatus>()
@@ -229,6 +266,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
 export const creatorsRelations = relations(creators, ({ one, many }) => ({
   user: one(users, { fields: [creators.userId], references: [users.id] }),
   topics: many(creatortopics),
+  collections: many(creatorCollections),
   tiers: many(tiers),
   subscriptions: many(creatorSubscriptions),
   patronage: many(patronage),
@@ -332,12 +370,38 @@ export const postPaidAudienceTiersRelations = relations(
   })
 );
 
+export const creatorCollectionsRelations = relations(
+  creatorCollections,
+  ({ one, many }) => ({
+    creator: one(creators, {
+      fields: [creatorCollections.creatorId],
+      references: [creators.id],
+    }),
+    collectionPosts: many(creatorCollectionPosts),
+  })
+);
+
+export const creatorCollectionPostsRelations = relations(
+  creatorCollectionPosts,
+  ({ one }) => ({
+    collection: one(creatorCollections, {
+      fields: [creatorCollectionPosts.collectionId],
+      references: [creatorCollections.id],
+    }),
+    post: one(posts, {
+      fields: [creatorCollectionPosts.postId],
+      references: [posts.id],
+    }),
+  })
+);
+
 export const postsRelations = relations(posts, ({ one, many }) => ({
   creator: one(creators, {
     fields: [posts.creatorId],
     references: [creators.id],
   }),
   paidAudienceTiers: many(postPaidAudienceTiers),
+  collectionMemberships: many(creatorCollectionPosts),
 }));
 
 export const patronageRelations = relations(patronage, ({ one }) => ({
@@ -383,6 +447,10 @@ export type Perk = {
 
 export type Post = typeof posts.$inferSelect;
 export type NewPost = typeof posts.$inferInsert;
+export type CreatorCollection = typeof creatorCollections.$inferSelect;
+export type NewCreatorCollection = typeof creatorCollections.$inferInsert;
+export type CreatorCollectionPost = typeof creatorCollectionPosts.$inferSelect;
+export type NewCreatorCollectionPost = typeof creatorCollectionPosts.$inferInsert;
 export type Patronage = typeof patronage.$inferSelect;
 export type NewPatronage = typeof patronage.$inferInsert;
 export type Chat = typeof chats.$inferSelect;

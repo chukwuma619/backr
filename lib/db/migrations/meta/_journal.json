@@ -36,6 +36,41 @@
       "when": 1773620299054,
       "tag": "0004_magenta_night_nurse",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1774044344508,
+      "tag": "0005_creator_cover_image",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774045487666,
+      "tag": "0006_post_cover_image",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1774045804128,
+      "tag": "0007_creator_post_collections",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1774045921799,
+      "tag": "0008_collections_integer_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1774046500000,
+      "tag": "0009_collection_posts_many_to_many",
+      "breakpoints": true
     }
   ]
 }

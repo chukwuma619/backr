@@ -1,7 +1,11 @@
+import { cache } from "react";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
 import { calculatePlatformFee } from "@/lib/platform-fee";
+import type { Creator } from "@/lib/db/schema";
 import {
+  creatorCollectionPosts,
+  creatorCollections,
   creatorSubscriptions,
   creators,
   creatortopics,
@@ -16,9 +20,124 @@ import {
   messages,
   notifications,
 } from "@/lib/db/schema";
-import { and, desc, eq, ilike, inArray, ne, notInArray, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  max,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from "drizzle-orm";
 
 const creatorUser = alias(users, "creator_user");
+
+export type PublicCreator = Creator & {
+  avatarUrl: string | null;
+  subscriberCount: number;
+  publishedPostCount: number;
+};
+
+export const getPublicCreatorBySlug = cache(async function getPublicCreatorBySlug(
+  slug: string
+): Promise<
+  | { data: PublicCreator; error: null }
+  | { data: null; error: null }
+  | { data: null; error: Error }
+> {
+  try {
+    const [row] = await db
+      .select({
+        creator: creators,
+        avatarUrl: users.avatarUrl,
+      })
+      .from(creators)
+      .innerJoin(users, eq(creators.userId, users.id))
+      .where(eq(creators.username, slug))
+      .limit(1);
+    if (!row) return { data: null, error: null };
+
+    const [subCount] = await db
+      .select({ n: count() })
+      .from(creatorSubscriptions)
+      .where(eq(creatorSubscriptions.creatorId, row.creator.id));
+
+    const [postCount] = await db
+      .select({ n: count() })
+      .from(posts)
+      .where(
+        and(eq(posts.creatorId, row.creator.id), eq(posts.status, "published"))
+      );
+
+    return {
+      data: {
+        ...row.creator,
+        avatarUrl: row.avatarUrl,
+        subscriberCount: Number(subCount?.n ?? 0),
+        publishedPostCount: Number(postCount?.n ?? 0),
+      },
+      error: null,
+    };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+});
+
+export async function getPublicPostAccessFlags(
+  postRows: { id: number; audience: string | null }[],
+  patronTierIdForCreator: string | null
+): Promise<Map<number, boolean>> {
+  const map = new Map<number, boolean>();
+  const paidIds: number[] = [];
+  for (const p of postRows) {
+    if (p.audience === "paid") {
+      paidIds.push(p.id);
+    } else {
+      map.set(p.id, true);
+    }
+  }
+  if (paidIds.length === 0) {
+    return map;
+  }
+  if (!patronTierIdForCreator) {
+    for (const id of paidIds) {
+      map.set(id, false);
+    }
+    return map;
+  }
+
+  const rows = await db
+    .select({
+      postId: postPaidAudienceTiers.postId,
+      tierId: postPaidAudienceTiers.tierId,
+    })
+    .from(postPaidAudienceTiers)
+    .where(inArray(postPaidAudienceTiers.postId, paidIds));
+
+  const byPost = new Map<number, Set<string>>();
+  for (const r of rows) {
+    if (!byPost.has(r.postId)) byPost.set(r.postId, new Set());
+    byPost.get(r.postId)!.add(r.tierId);
+  }
+
+  for (const id of paidIds) {
+    const tierSet = byPost.get(id);
+    const ok = Boolean(
+      tierSet &&
+        tierSet.size > 0 &&
+        patronTierIdForCreator &&
+        tierSet.has(patronTierIdForCreator)
+    );
+    map.set(id, ok);
+  }
+  return map;
+}
 
 export async function getCreatorBySlug(slug: string) {
   try {
@@ -239,6 +358,181 @@ export async function getCreatorTopicSlugs(creatorId: string) {
   } catch (error) {
     console.error(error);
     return { data: [], error: error as Error };
+  }
+}
+
+export async function getCreatorTopicsByCreatorId(creatorId: string) {
+  try {
+    const rows = await db
+      .select()
+      .from(creatortopics)
+      .where(eq(creatortopics.creatorId, creatorId))
+      .orderBy(asc(creatortopics.label));
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getPublicGroupChatsForCreator(creatorId: string) {
+  try {
+    const rows = await db
+      .select()
+      .from(chats)
+      .where(and(eq(chats.creatorId, creatorId), eq(chats.type, "group")))
+      .orderBy(desc(chats.updatedAt));
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getCreatorCollectionsByCreatorId(creatorId: string) {
+  try {
+    const rows = await db
+      .select()
+      .from(creatorCollections)
+      .where(eq(creatorCollections.creatorId, creatorId))
+      .orderBy(desc(creatorCollections.updatedAt));
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getCreatorCollectionByIdForCreator(
+  collectionId: number,
+  creatorId: string
+) {
+  try {
+    const [row] = await db
+      .select()
+      .from(creatorCollections)
+      .where(
+        and(
+          eq(creatorCollections.id, collectionId),
+          eq(creatorCollections.creatorId, creatorId)
+        )
+      )
+      .limit(1);
+    return { data: row ?? null, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+}
+
+export async function getPublicCreatorCollectionById(
+  creatorId: string,
+  collectionId: number
+) {
+  try {
+    const [row] = await db
+      .select()
+      .from(creatorCollections)
+      .where(
+        and(
+          eq(creatorCollections.creatorId, creatorId),
+          eq(creatorCollections.id, collectionId)
+        )
+      )
+      .limit(1);
+    return { data: row ?? null, error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: null, error: error as Error };
+  }
+}
+
+export async function getPublishedPostsByCollectionId(collectionId: number) {
+  try {
+    const rows = await db
+      .select({ post: posts, sortOrder: creatorCollectionPosts.sortOrder })
+      .from(creatorCollectionPosts)
+      .innerJoin(posts, eq(posts.id, creatorCollectionPosts.postId))
+      .where(
+        and(
+          eq(creatorCollectionPosts.collectionId, collectionId),
+          eq(posts.status, "published")
+        )
+      )
+      .orderBy(asc(creatorCollectionPosts.sortOrder), desc(posts.publishedAt));
+    return { data: rows.map((r) => r.post), error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function getPostCollectionIds(postId: number) {
+  try {
+    const rows = await db
+      .select({ collectionId: creatorCollectionPosts.collectionId })
+      .from(creatorCollectionPosts)
+      .where(eq(creatorCollectionPosts.postId, postId));
+    return { data: rows.map((r) => r.collectionId), error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
+export async function setPostCollections(
+  postId: number,
+  creatorId: string,
+  collectionIds: number[]
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const [post] = await db
+      .select({ creatorId: posts.creatorId })
+      .from(posts)
+      .where(eq(posts.id, postId))
+      .limit(1);
+    if (!post || post.creatorId !== creatorId) {
+      return { ok: false, error: "Unauthorized" };
+    }
+
+    const uniqueIds = [...new Set(collectionIds)].filter(
+      (n) => Number.isFinite(n) && n >= 1
+    );
+    if (uniqueIds.length > 0) {
+      const valid = await db
+        .select({ id: creatorCollections.id })
+        .from(creatorCollections)
+        .where(
+          and(
+            eq(creatorCollections.creatorId, creatorId),
+            inArray(creatorCollections.id, uniqueIds)
+          )
+        );
+      if (valid.length !== uniqueIds.length) {
+        return { ok: false, error: "Invalid collection" };
+      }
+    }
+
+    await db
+      .delete(creatorCollectionPosts)
+      .where(eq(creatorCollectionPosts.postId, postId));
+
+    for (const collectionId of uniqueIds) {
+      const [maxRow] = await db
+        .select({ m: max(creatorCollectionPosts.sortOrder) })
+        .from(creatorCollectionPosts)
+        .where(eq(creatorCollectionPosts.collectionId, collectionId));
+      const nextSort = (maxRow?.m ?? -1) + 1;
+      await db.insert(creatorCollectionPosts).values({
+        postId,
+        collectionId,
+        sortOrder: nextSort,
+      });
+    }
+    return { ok: true };
+  } catch (error) {
+    console.error(error);
+    return { ok: false, error: "Failed to update collection" };
   }
 }
 

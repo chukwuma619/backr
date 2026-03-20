@@ -42,6 +42,7 @@ const createSchema = z.object({
 
 const updateSchema = createSchema.extend({
   topics: z.array(z.string()).min(1, "Select at least one topic").optional(),
+  coverImageUrl: z.string().max(500).optional(),
 });
 
 export type CreateCreatorState = {
@@ -150,6 +151,7 @@ export async function updateCreator(
     bio: (formData.get("bio") as string) || undefined,
     topics,
     avatarUrl: (formData.get("avatarUrl") as string) || undefined,
+    coverImageUrl: (formData.get("coverImageUrl") as string) || undefined,
     fiberNodeRpcUrl: (formData.get("fiberNodeRpcUrl") as string) || undefined,
   };
 
@@ -158,6 +160,7 @@ export async function updateCreator(
     slug: raw.slug?.trim().toLowerCase(),
     displayName: raw.displayName?.trim(),
     fiberNodeRpcUrl: raw.fiberNodeRpcUrl?.trim() || "",
+    coverImageUrl: raw.coverImageUrl?.trim() || undefined,
   });
 
   if (!parsed.success) {
@@ -179,6 +182,7 @@ export async function updateCreator(
         username: slugResult.slug,
         displayName: parsed.data.displayName,
         bio: parsed.data.bio ?? null,
+        coverImageUrl: parsed.data.coverImageUrl?.trim() || null,
         updatedAt: new Date(),
       })
       .where(eq(creators.id, creatorId))
@@ -212,6 +216,7 @@ export async function updateCreator(
       .where(eq(users.id, userId));
     revalidatePath("/creator");
     revalidatePath("/creator/settings/basic");
+    revalidatePath(`/c/${slugResult.slug}`);
     return { data: creator, errors: null };
   } catch (error) {
     console.error(error);
