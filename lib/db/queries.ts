@@ -334,6 +334,20 @@ export async function getTiersByCreatorId(creatorId: string) {
   }
 }
 
+/** Every membership tier for this creator (no limit), ordered by price ascending for public pricing pages. */
+export async function getPublicMembershipTiersForCreator(creatorId: string) {
+  const result = await getTiersByCreatorId(creatorId);
+  const rows = result.data ?? [];
+  const sorted = [...rows].sort((a, b) => {
+    const na = parseFloat(String(a.amount).replace(/[^0-9.-]/g, ""));
+    const nb = parseFloat(String(b.amount).replace(/[^0-9.-]/g, ""));
+    const aNum = Number.isFinite(na) ? na : 0;
+    const bNum = Number.isFinite(nb) ? nb : 0;
+    return aNum - bNum;
+  });
+  return { data: sorted, error: result.error };
+}
+
 export async function getTierById(tierId: string) {
   try {
     const [row] = await db

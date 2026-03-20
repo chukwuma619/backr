@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import {
+  canPatronAccessGroupChat,
   getPublicCreatorBySlug,
   getPublicGroupChatsForCreator,
 } from "@/lib/db/queries";
@@ -45,6 +46,20 @@ export default async function CreatorChatsPage({ params }: Props) {
     getPublicGroupChatsForCreator(creator.id),
   ]);
 
+  const paidAccessByChatId = new Map<string, boolean>();
+  if (user) {
+    await Promise.all(
+      groupChats
+        .filter((c) => c.audience === "paid")
+        .map(async (c) => {
+          paidAccessByChatId.set(
+            c.id,
+            await canPatronAccessGroupChat(c.id, user.id)
+          );
+        })
+    );
+  }
+
   const displayTitle = (name: string | null) => {
     const n = name?.trim();
     if (n) return n;
@@ -57,8 +72,8 @@ export default async function CreatorChatsPage({ params }: Props) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Chats</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Community spaces from {creator.displayName}. Join a tier if a chat
-            is for members.
+            All community groups from {creator.displayName}. Member-only chats
+            need a tier; free chats are open to everyone.
           </p>
         </div>
 
@@ -68,62 +83,81 @@ export default async function CreatorChatsPage({ params }: Props) {
           </p>
         ) : (
           <ul className="space-y-4">
-            {groupChats.map((chat) => (
-              <li key={chat.id}>
-                <Card>
-                  <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex min-w-0 gap-3">
-                      <Avatar className="size-12 shrink-0">
-                        <AvatarImage
-                          src={chat.imageUrl ?? undefined}
-                          alt=""
-                          className="object-cover"
-                        />
-                        <AvatarFallback>
-                          <MessageCircle
-                            className="text-muted-foreground size-5"
-                            aria-hidden
+            {groupChats.map((chat) => {
+              const isPaid = chat.audience === "paid";
+              const hasPaidAccess =
+                Boolean(user) && paidAccessByChatId.get(chat.id) === true;
+              const dashboardHref = `/dashboard/chats?chat=${chat.id}`;
+              const membershipHref = `/c/${username}/membership`;
+
+              return (
+                <li key={chat.id}>
+                  <Card>
+                    <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 gap-3">
+                        <Avatar className="size-12 shrink-0">
+                          <AvatarImage
+                            src={chat.imageUrl ?? undefined}
+                            alt=""
+                            className="object-cover"
                           />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <CardTitle className="text-lg">
-                            {displayTitle(chat.name)}
-                          </CardTitle>
-                          {chat.audience === "paid" ? (
-                            <Badge variant="secondary">Members</Badge>
-                          ) : (
-                            <Badge variant="outline">Free</Badge>
-                          )}
+                          <AvatarFallback>
+                            <MessageCircle
+                              className="text-muted-foreground size-5"
+                              aria-hidden
+                            />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <CardTitle className="text-lg">
+                              {displayTitle(chat.name)}
+                            </CardTitle>
+                            {isPaid ? (
+                              <Badge variant="secondary">Members</Badge>
+                            ) : (
+                              <Badge variant="outline">Free</Badge>
+                            )}
+                          </div>
+                          <CardDescription>
+                            {isPaid
+                              ? "Members-only · join the right tier to unlock."
+                              : "Free community chat · join from your dashboard."}
+                          </CardDescription>
                         </div>
-                        <CardDescription>
-                          Group chat · open in your dashboard to participate
-                        </CardDescription>
                       </div>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                      {user ? (
-                        <Button asChild size="sm" variant="default">
-                          <Link href={`/dashboard/chats?chat=${chat.id}`}>
-                            Open chat
-                          </Link>
-                        </Button>
-                      ) : (
-                        <Button asChild size="sm" variant="outline">
-                          <Link href="/">Connect wallet to chat</Link>
-                        </Button>
-                      )}
-                      <Button asChild size="sm" variant="ghost">
-                        <Link href={`/c/${username}/membership`}>
-                          Membership
-                        </Link>
-                      </Button>
-                    </div>
-                  </CardHeader>
-                </Card>
-              </li>
-            ))}
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        {!isPaid ? (
+                          <>
+                            <Button asChild size="sm" variant="default">
+                              <Link href={user ? dashboardHref : "/"}>
+                                Join for free
+                              </Link>
+                            </Button>
+                            <Button asChild size="sm" variant="ghost">
+                              <Link href={membershipHref}>Membership</Link>
+                            </Button>
+                          </>
+                        ) : hasPaidAccess ? (
+                          <>
+                            <Button asChild size="sm" variant="default">
+                              <Link href={dashboardHref}>Open chat</Link>
+                            </Button>
+                            <Button asChild size="sm" variant="ghost">
+                              <Link href={membershipHref}>Membership</Link>
+                            </Button>
+                          </>
+                        ) : (
+                          <Button asChild size="sm" variant="default">
+                            <Link href={membershipHref}>Join to unlock</Link>
+                          </Button>
+                        )}
+                      </div>
+                    </CardHeader>
+                  </Card>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

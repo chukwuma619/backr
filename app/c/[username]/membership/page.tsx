@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
-import {
-  getPublicCreatorBySlug,
-  getTiersByCreatorId,
-} from "@/lib/db/queries";
+import { getPublicCreatorBySlug, getPublicMembershipTiersForCreator } from "@/lib/db/queries";
 import { SupportButton } from "@/components/creator-hub/support-button";
 import { PublicCreatorPageShell } from "@/components/creator/public-creator-page-shell";
 import {
@@ -35,7 +33,8 @@ export default async function CreatorMembershipPage({ params }: Props) {
     notFound();
   }
 
-  const { data: tiers = [] } = await getTiersByCreatorId(creator.id);
+  const { data: tiers = [], error: tiersError } =
+    await getPublicMembershipTiersForCreator(creator.id);
 
   return (
     <PublicCreatorPageShell>
@@ -43,26 +42,47 @@ export default async function CreatorMembershipPage({ params }: Props) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Membership</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Choose a tier to support {creator.displayName} and unlock member
-            posts.
+            {tiers.length > 0
+              ? `All ${tiers.length} membership tier${tiers.length === 1 ? "" : "s"} from ${creator.displayName}. Pick one to unlock member posts.`
+              : `Choose a tier to support ${creator.displayName} and unlock member posts.`}
           </p>
         </div>
 
-        {tiers.length === 0 ? (
+        {tiersError ? (
+          <p className="text-destructive text-sm">
+            Couldn&apos;t load tiers. Try again later.
+          </p>
+        ) : tiers.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             This creator hasn&apos;t published membership tiers yet.
           </p>
         ) : (
-          <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             {tiers.map((tier) => (
-              <Card key={tier.id}>
-                <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <Card key={tier.id} className="overflow-hidden flex flex-col">
+                {tier.coverImageUrl ? (
+                  <div className="bg-muted relative aspect-video w-full">
+                    <Image
+                      src={tier.coverImageUrl}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 100vw, 50vw"
+                      unoptimized
+                    />
+                  </div>
+                ) : null}
+                <CardHeader className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 space-y-1">
                     <CardTitle className="text-lg">{tier.name}</CardTitle>
-                    <CardDescription>
+                    <p className="text-foreground text-sm font-medium">
                       ${tier.amount}
-                      {tier.description ? ` · ${tier.description}` : ""}
-                    </CardDescription>
+                    </p>
+                    {tier.description ? (
+                      <CardDescription className="text-pretty">
+                        {tier.description}
+                      </CardDescription>
+                    ) : null}
                   </div>
                   <SupportButton tier={{ ...tier, perks: [] }} creator={creator} />
                 </CardHeader>
