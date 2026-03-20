@@ -8,7 +8,6 @@ import {
   getPublicCreatorBySlug,
   getPublicGroupChatsForCreator,
 } from "@/lib/db/queries";
-import { PublicCreatorPageShell } from "@/components/creator/public-creator-page-shell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,7 +66,7 @@ export default async function CreatorChatsPage({ params }: Props) {
   };
 
   return (
-    <PublicCreatorPageShell>
+    <div className="w-full px-4 pb-16 pt-6">
       <div className="space-y-8">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Chats</h1>
@@ -161,6 +160,6 @@ export default async function CreatorChatsPage({ params }: Props) {
           </ul>
         )}
       </div>
-    </PublicCreatorPageShell>
+    </div>
   );
 }

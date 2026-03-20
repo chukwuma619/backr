@@ -7,7 +7,6 @@ import {
   getPublicPostAccessFlags,
   getPublishedPostsByCreatorId,
 } from "@/lib/db/queries";
-import { PublicCreatorPageShell } from "@/components/creator/public-creator-page-shell";
 import { PublicPostsSection } from "@/components/creator/public-posts-section";
 
 type Props = {
@@ -48,7 +47,7 @@ export default async function CreatorPostsPage({ params }: Props) {
   );
 
   return (
-    <PublicCreatorPageShell>
+    <div className="w-full px-4 pb-16 pt-6">
       <PublicPostsSection
         username={username}
         posts={posts}
@@ -57,6 +56,6 @@ export default async function CreatorPostsPage({ params }: Props) {
         description="Published posts, newest first"
         emptyMessage="No published posts yet."
       />
-    </PublicCreatorPageShell>
+    </div>
   );
 }

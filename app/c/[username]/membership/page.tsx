@@ -3,7 +3,6 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getPublicCreatorBySlug, getPublicMembershipTiersForCreator } from "@/lib/db/queries";
 import { SupportButton } from "@/components/creator-hub/support-button";
-import { PublicCreatorPageShell } from "@/components/creator/public-creator-page-shell";
 import {
   Card,
   CardDescription,
@@ -37,7 +36,7 @@ export default async function CreatorMembershipPage({ params }: Props) {
     await getPublicMembershipTiersForCreator(creator.id);
 
   return (
-    <PublicCreatorPageShell>
+    <div className="w-full px-4 pb-16 pt-6">
       <div className="space-y-8">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Membership</h1>
@@ -91,6 +90,6 @@ export default async function CreatorMembershipPage({ params }: Props) {
           </div>
         )}
       </div>
-    </PublicCreatorPageShell>
+    </div>
   );
 }

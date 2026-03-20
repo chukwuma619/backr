@@ -5,10 +5,11 @@ import { usePathname } from "next/navigation";
 import { DashboardLink } from "@/components/dashboard-link";
 import { WalletConnect } from "@/components/wallet-connect";
 import { cn } from "@/lib/utils";
+import { Avatar,AvatarFallback,AvatarImage } from "../ui/avatar";
 
-export function PublicCreatorNav({ username }: { username: string }) {
+export function PublicCreatorNav({ creator }: { creator: unknown }) {
   const pathname = usePathname();
-  const base = `/c/${username}`;
+  const base = `/c/${creator.username}`;
 
   const items: { href: string; label: string; active: boolean }[] = [
     {
@@ -41,15 +42,19 @@ export function PublicCreatorNav({ username }: { username: string }) {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-3">
+      <div className="flex w-full items-center justify-between gap-2 px-4 py-3">
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
-          <Link
-            href="/"
-            className="shrink-0 text-sm font-semibold tracking-tight text-foreground"
-          >
-            Backr
-          </Link>
-          <nav
+         <Avatar>
+          <AvatarImage src={creator.avatarUrl ?? undefined} alt="" />
+          <AvatarFallback className="text-2xl font-semibold md:text-3xl">
+            {creator.displayName.slice(0, 1).toUpperCase()}
+          </AvatarFallback>
+         </Avatar>
+
+        </div>
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          
+        <nav
             aria-label="Creator profile"
             className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto sm:gap-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
@@ -66,16 +71,7 @@ export function PublicCreatorNav({ username }: { username: string }) {
               </Link>
             ))}
           </nav>
-        </div>
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <Link
-            href="/"
-            className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline"
-          >
-            Log in
-          </Link>
-          <DashboardLink />
-          <WalletConnect />
+         
         </div>
       </div>
     </header>

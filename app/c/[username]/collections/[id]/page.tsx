@@ -10,7 +10,6 @@ import {
   getPublicPostAccessFlags,
   getPublishedPostsByCollectionId,
 } from "@/lib/db/queries";
-import { PublicCreatorPageShell } from "@/components/creator/public-creator-page-shell";
 import { PublicPostsSection } from "@/components/creator/public-posts-section";
 
 type Props = {
@@ -75,7 +74,7 @@ export default async function CreatorCollectionDetailPage({ params }: Props) {
   );
 
   return (
-    <PublicCreatorPageShell>
+    <div className="w-full px-4 pb-16 pt-6">
       <div className="space-y-8">
         <div>
           <p className="text-muted-foreground text-sm">
@@ -140,6 +139,6 @@ export default async function CreatorCollectionDetailPage({ params }: Props) {
           </Link>
         </div>
       </div>
-    </PublicCreatorPageShell>
+    </div>
   );
 }

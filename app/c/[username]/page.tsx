@@ -13,7 +13,6 @@ import {
   getPublishedPostsByCreatorId,
 } from "@/lib/db/queries";
 import { PublicCollectionsRow } from "@/components/creator/public-collections-row";
-import { PublicCreatorPageShell } from "@/components/creator/public-creator-page-shell";
 import {
   PublicPostCarousel,
   type PublicPostSlide,
@@ -126,7 +125,7 @@ export default async function CreatorProfilePage({ params }: Props) {
         </div>
       </div>
 
-      <PublicCreatorPageShell className="pt-0">
+      <div className="w-full px-4 pb-16 pt-6">
         <div className="-mt-14 relative z-10 space-y-10 pt-6">
           <section className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-muted/50 via-background to-background p-6 shadow-sm md:p-8">
             <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
@@ -280,7 +279,7 @@ export default async function CreatorProfilePage({ params }: Props) {
             />
           ) : null}
         </div>
-      </PublicCreatorPageShell>
+      </div>
     </>
   );
 }

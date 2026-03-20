@@ -17,7 +17,7 @@ export default async function CreatorLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      <PublicCreatorNav username={username} />
+      <PublicCreatorNav creator={creator} />
       {children}
     </div>
   );
