@@ -281,22 +281,7 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
                 </Field>
               )}
             />
-            <Field>
-              <p className="text-sm font-medium mb-1">Nostr</p>
-              <p className="text-xs text-muted-foreground">
-                {data.nostrPubkey
-                  ? `Connected: ${data.nostrPubkey.slice(0, 12)}…${data.nostrPubkey.slice(-6)}. `
-                  : "Not connected. "}
-                Connect or disconnect in{" "}
-                <Link
-                  href="/dashboard/settings/basic"
-                  className="text-primary font-medium underline-offset-4 hover:underline"
-                >
-                  Account settings
-                </Link>
-                .
-              </p>
-            </Field>
+
             <Field>
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? "Saving…" : "Save changes"}
