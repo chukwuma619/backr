@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation";
 import { DashboardLink } from "@/components/dashboard-link";
 import { WalletConnect } from "@/components/wallet-connect";
 import { cn } from "@/lib/utils";
-import { Avatar,AvatarFallback,AvatarImage } from "../ui/avatar";
+import type { PublicCreator } from "@/lib/db/queries";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
-export function PublicCreatorNav({ creator }: { creator: unknown }) {
+export function PublicCreatorNav({ creator }: { creator: PublicCreator }) {
   const pathname = usePathname();
   const base = `/c/${creator.username}`;
 

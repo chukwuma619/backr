@@ -13,8 +13,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
+import { cn } from "@/lib/utils";
 
-export function CreateCollectionForm() {
+export function CreateCollectionForm({
+  onSuccess,
+  showFrame = true,
+}: {
+  onSuccess?: () => void;
+  showFrame?: boolean;
+}) {
   const router = useRouter();
   const [coverImageUrl, setCoverImageUrl] = useState("");
 
@@ -26,6 +33,7 @@ export function CreateCollectionForm() {
       toast.success("Collection created");
       e.currentTarget.reset();
       setCoverImageUrl("");
+      onSuccess?.();
       router.refresh();
       return;
     }
@@ -41,7 +49,10 @@ export function CreateCollectionForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 rounded-lg border p-4">
+    <form
+      onSubmit={onSubmit}
+      className={cn("space-y-4", showFrame && "rounded-lg border p-4")}
+    >
       <input type="hidden" name="coverImageUrl" value={coverImageUrl} />
       <p className="font-medium">New collection</p>
       <FieldGroup>

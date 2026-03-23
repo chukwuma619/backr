@@ -481,6 +481,38 @@ export async function getPublishedPostsByCollectionId(collectionId: number) {
   }
 }
 
+/** Posts in a collection for the creator dashboard (any post status). */
+export async function getPostsInCollectionForCreator(
+  collectionId: number,
+  creatorId: string
+) {
+  try {
+    const rows = await db
+      .select({ post: posts })
+      .from(creatorCollectionPosts)
+      .innerJoin(posts, eq(posts.id, creatorCollectionPosts.postId))
+      .innerJoin(
+        creatorCollections,
+        eq(creatorCollections.id, creatorCollectionPosts.collectionId)
+      )
+      .where(
+        and(
+          eq(creatorCollectionPosts.collectionId, collectionId),
+          eq(creatorCollections.creatorId, creatorId),
+          eq(posts.creatorId, creatorId)
+        )
+      )
+      .orderBy(
+        asc(creatorCollectionPosts.sortOrder),
+        desc(sql`COALESCE(${posts.publishedAt}, ${posts.createdAt})`)
+      );
+    return { data: rows.map((r) => r.post), error: null };
+  } catch (error) {
+    console.error(error);
+    return { data: [], error: error as Error };
+  }
+}
+
 export async function getPostCollectionIds(postId: number) {
   try {
     const rows = await db

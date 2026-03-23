@@ -1,10 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray, max } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { creatorCollections, creators } from "@/lib/db/schema";
+import {
+  creatorCollectionPosts,
+  creatorCollections,
+  creators,
+  posts,
+} from "@/lib/db/schema";
 import { getCreatorForDashboard } from "@/lib/creators/get-creator-for-dashboard";
 
 async function revalidateCreatorPublicPaths(creatorId: string) {
@@ -146,5 +151,135 @@ export async function deleteCreatorCollection(collectionId: string) {
   } catch (e) {
     console.error(e);
     return { error: "Failed to delete" as const };
+  }
+}
+
+export async function addPostsToCreatorCollection(
+  collectionIdStr: string,
+  postIds: number[]
+) {
+  const { creator } = await getCreatorForDashboard();
+  if (!creator) return { error: "Unauthorized" as const };
+
+  const collectionId = parseInt(collectionIdStr, 10);
+  if (!Number.isFinite(collectionId) || collectionId < 1) {
+    return { error: "Invalid collection" as const };
+  }
+
+  const unique = [...new Set(postIds)].filter(
+    (n) => Number.isFinite(n) && n >= 1
+  );
+  if (unique.length === 0) {
+    return { ok: true as const };
+  }
+
+  const [coll] = await db
+    .select({ id: creatorCollections.id })
+    .from(creatorCollections)
+    .where(
+      and(
+        eq(creatorCollections.id, collectionId),
+        eq(creatorCollections.creatorId, creator.id)
+      )
+    )
+    .limit(1);
+  if (!coll) return { error: "Not found" as const };
+
+  const postRows = await db
+    .select({ id: posts.id })
+    .from(posts)
+    .where(and(eq(posts.creatorId, creator.id), inArray(posts.id, unique)));
+  if (postRows.length !== unique.length) {
+    return { error: "Invalid post" as const };
+  }
+
+  try {
+    for (const postId of unique) {
+      const [already] = await db
+        .select({ collectionId: creatorCollectionPosts.collectionId })
+        .from(creatorCollectionPosts)
+        .where(
+          and(
+            eq(creatorCollectionPosts.collectionId, collectionId),
+            eq(creatorCollectionPosts.postId, postId)
+          )
+        )
+        .limit(1);
+      if (already) continue;
+
+      const [maxRow] = await db
+        .select({ m: max(creatorCollectionPosts.sortOrder) })
+        .from(creatorCollectionPosts)
+        .where(eq(creatorCollectionPosts.collectionId, collectionId));
+      const nextSort = (maxRow?.m ?? -1) + 1;
+      await db.insert(creatorCollectionPosts).values({
+        postId,
+        collectionId,
+        sortOrder: nextSort,
+      });
+    }
+    revalidatePath("/creator/collections");
+    revalidatePath(`/creator/collections/${collectionId}`);
+    await revalidateCreatorPublicPaths(creator.id);
+    return { ok: true as const };
+  } catch (e) {
+    console.error(e);
+    return { error: "Failed to add posts" as const };
+  }
+}
+
+export async function removePostFromCreatorCollection(
+  collectionIdStr: string,
+  postIdStr: string
+) {
+  const { creator } = await getCreatorForDashboard();
+  if (!creator) return { error: "Unauthorized" as const };
+
+  const collectionId = parseInt(collectionIdStr, 10);
+  const postId = parseInt(postIdStr, 10);
+  if (
+    !Number.isFinite(collectionId) ||
+    collectionId < 1 ||
+    !Number.isFinite(postId) ||
+    postId < 1
+  ) {
+    return { error: "Invalid" as const };
+  }
+
+  const [coll] = await db
+    .select({ id: creatorCollections.id })
+    .from(creatorCollections)
+    .where(
+      and(
+        eq(creatorCollections.id, collectionId),
+        eq(creatorCollections.creatorId, creator.id)
+      )
+    )
+    .limit(1);
+  if (!coll) return { error: "Not found" as const };
+
+  const [postRow] = await db
+    .select({ id: posts.id })
+    .from(posts)
+    .where(and(eq(posts.id, postId), eq(posts.creatorId, creator.id)))
+    .limit(1);
+  if (!postRow) return { error: "Invalid post" as const };
+
+  try {
+    await db
+      .delete(creatorCollectionPosts)
+      .where(
+        and(
+          eq(creatorCollectionPosts.collectionId, collectionId),
+          eq(creatorCollectionPosts.postId, postId)
+        )
+      );
+    revalidatePath("/creator/collections");
+    revalidatePath(`/creator/collections/${collectionId}`);
+    await revalidateCreatorPublicPaths(creator.id);
+    return { ok: true as const };
+  } catch (e) {
+    console.error(e);
+    return { error: "Failed to remove post" as const };
   }
 }
