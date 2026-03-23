@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
@@ -63,7 +62,6 @@ type BasicSettingsFormProps = {
     avatarUrl?: string | null;
     coverImageUrl?: string | null;
     fiberNodeRpcUrl?: string | null;
-    nostrPubkey?: string | null;
     topicSlugs: string[];
   };
 };

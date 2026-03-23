@@ -20,12 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  updateAccount,
-  updateAccountNostrPubkey,
-  clearNostrPubkeyForCurrentUser,
-} from "@/app/actions/account";
-import { getNostrPublicKey } from "@/lib/nostr/publish-post";
+import { updateAccount } from "@/app/actions/account";
 import { truncateAddress } from "@/lib/utils";
 import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
 
@@ -41,17 +36,12 @@ type BasicSettingsFormProps = {
     ckbAddress: string;
     avatarUrl: string | null;
     fiberNodeRpcUrl: string | null;
-    nostrPubkey: string | null;
   };
 };
 
 export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [nostrPending, setNostrPending] = useState<
-    false | "connect" | "disconnect"
-  >(false);
-  const [nostrError, setNostrError] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -81,43 +71,6 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
       return;
     }
     router.refresh();
-  }
-
-  async function handleConnectNostr() {
-    setNostrError(null);
-    setNostrPending("connect");
-    try {
-      const pubkey = await getNostrPublicKey();
-      const result = await updateAccountNostrPubkey(pubkey);
-      if (result?.error) {
-        throw result.error;
-      }
-      router.refresh();
-    } catch (err) {
-      setNostrError(
-        err instanceof Error ? err.message : "Failed to connect Nostr"
-      );
-    } finally {
-      setNostrPending(false);
-    }
-  }
-
-  async function handleDisconnectNostr() {
-    setNostrError(null);
-    setNostrPending("disconnect");
-    try {
-      const result = await clearNostrPubkeyForCurrentUser();
-      if (result?.error) {
-        throw result.error;
-      }
-      router.refresh();
-    } catch (err) {
-      setNostrError(
-        err instanceof Error ? err.message : "Failed to disconnect Nostr"
-      );
-    } finally {
-      setNostrPending(false);
-    }
   }
 
   return (
@@ -202,46 +155,6 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
                   </Field>
                 )}
               />
-              <Field>
-                <p className="text-sm font-medium mb-1">Nostr</p>
-                <p className="text-xs text-muted-foreground mb-2">
-                  {data.nostrPubkey
-                    ? `Connected: ${data.nostrPubkey.slice(0, 12)}…${data.nostrPubkey.slice(-6)}`
-                    : "Connect a Nostr extension (e.g. nos2x) to link your identity."}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant={data.nostrPubkey ? "outline" : "default"}
-                    size="sm"
-                    onClick={handleConnectNostr}
-                    disabled={nostrPending !== false}
-                  >
-                    {nostrPending === "connect"
-                      ? "Connecting…"
-                      : data.nostrPubkey
-                        ? "Reconnect"
-                        : "Connect Nostr"}
-                  </Button>
-                  {data.nostrPubkey ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-muted-foreground"
-                      onClick={handleDisconnectNostr}
-                      disabled={nostrPending !== false}
-                    >
-                      {nostrPending === "disconnect"
-                        ? "Disconnecting…"
-                        : "Disconnect"}
-                    </Button>
-                  ) : null}
-                </div>
-                {nostrError && (
-                  <p className="text-sm text-destructive mt-2">{nostrError}</p>
-                )}
-              </Field>
               <Field>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
                   {form.formState.isSubmitting ? "Saving…" : "Save changes"}

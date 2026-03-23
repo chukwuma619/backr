@@ -46,7 +46,6 @@ export default async function CreatorPostDetailPage({ params }: Props) {
   return (
     <PostEditor
       post={post}
-      nostrPubkey={creator.nostrPubkey ?? null}
       tiers={tiers ?? []}
       paidAudienceTierIds={paidTierIds ?? []}
       collections={collections.map((c) => ({ id: c.id, name: c.name }))}

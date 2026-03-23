@@ -88,61 +88,6 @@ export async function updatePost(
   }
 }
 
-export async function updatePostNostrEventId(
-  postId: number,
-  eventId: string
-): Promise<{ message?: string } | void> {
-  try {
-    await db
-      .update(posts)
-      .set({ nostrEventId: eventId.trim(), updatedAt: new Date() })
-      .where(eq(posts.id, postId));
-    revalidatePath("/creator/post");
-  } catch (error) {
-    console.error(error);
-    return {
-      message: error instanceof Error ? error.message : "Failed to update Nostr event ID",
-    };
-  }
-}
-
-export async function clearPostNostrEventId(
-  postId: number
-): Promise<{ message?: string } | void> {
-  try {
-    const [row] = await db
-      .select({ creatorId: posts.creatorId })
-      .from(posts)
-      .where(eq(posts.id, postId))
-      .limit(1);
-    if (!row) {
-      return { message: "Post not found" };
-    }
-
-    await db
-      .update(posts)
-      .set({ nostrEventId: null, updatedAt: new Date() })
-      .where(eq(posts.id, postId));
-
-    revalidatePath("/creator/post");
-    const [creator] = await db
-      .select({ username: creators.username })
-      .from(creators)
-      .where(eq(creators.id, row.creatorId))
-      .limit(1);
-    if (creator) {
-      revalidatePath(`/c/${creator.username}`);
-      revalidatePath(`/c/${creator.username}/collections`);
-    }
-  } catch (error) {
-    console.error(error);
-    return {
-      message:
-        error instanceof Error ? error.message : "Failed to clear Nostr event id",
-    };
-  }
-}
-
 const audienceSchema = z.object({
   audience: z.enum(["free", "paid"]),
   minTierId: z.string(), // "" for free, tier uuid, or "all" for all tiers

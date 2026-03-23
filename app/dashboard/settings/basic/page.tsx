@@ -21,7 +21,6 @@ export default async function BasicSettingsPage() {
           ckbAddress: user.ckbAddress,
           avatarUrl: user.avatarUrl,
           fiberNodeRpcUrl: user.fiberNodeRpcUrl,
-          nostrPubkey: user.nostrPubkey,
         }}
       />
     </div>

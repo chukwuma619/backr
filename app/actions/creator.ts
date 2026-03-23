@@ -15,7 +15,6 @@ import {
 import { validateSlug } from "@/lib/creators/slug";
 import { getCreatorForDashboard } from "@/lib/creators/get-creator-for-dashboard";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { normalizeNostrPubkeyHex } from "@/lib/nostr/normalize-pubkey";
 import { DISCOVER_TOPICS } from "@/lib/discover/constants";
 
 const DISCOVER_TOPICS_MAP = Object.fromEntries(
@@ -232,39 +231,3 @@ export async function updateCreatorProfile(formData: FormData) {
   return updateCreator(user.id, creator.id, formData);
 }
 
-export async function updateCreatorNostrPubkey(
-  userId: string,
-  nostrPubkey: string,
-) {
-  const sessionUser = await getCurrentUser();
-  if (!sessionUser || sessionUser.id !== userId) {
-    return { data: null, error: new Error("Unauthorized") };
-  }
-
-  let hex: string;
-  try {
-    hex = normalizeNostrPubkeyHex(nostrPubkey);
-  } catch {
-    return { data: null, error: new Error("Invalid Nostr public key") };
-  }
-
-  try {
-    const [user] = await db
-      .update(users)
-      .set({ nostrPubkey: hex, updatedAt: new Date() })
-      .where(eq(users.id, userId))
-      .returning();
-    revalidatePath("/creator");
-    revalidatePath("/creator/settings/basic");
-    return { data: user, error: null };
-  } catch (error) {
-    console.error(error);
-    return { data: null, error: error as Error };
-  }
-}
-
-export async function updateCreatorNostrPubkeyFromSession(nostrPubkey: string) {
-  const { user } = await getCreatorForDashboard();
-  if (!user) return { data: null, error: new Error("Unauthorized") };
-  return updateCreatorNostrPubkey(user.id, nostrPubkey);
-}

@@ -16,8 +16,7 @@ export function LandingHero() {
           <span className="text-primary">Nervos CKB</span>
         </h1>
         <p className="mt-6 text-lg text-muted-foreground sm:text-xl">
-          Monetize your work. Support creators you love. Built on CKB with
-          Nostr integration.
+          Monetize your work. Support creators you love.
         </p>
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           {!isLoading && user ? (

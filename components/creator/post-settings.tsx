@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { Control } from "react-hook-form";
 import type { PostEditorFormValues } from "@/lib/creator/post-editor-types";
 import { Controller, useForm } from "react-hook-form";
@@ -29,7 +28,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { updatePostAudience } from "@/app/actions/post";
 import type { Post } from "@/lib/db/schema";
-import { removeNostrPublicationForPaidPost } from "@/lib/nostr/remove-paid-post-from-nostr";
 
 const formSchema = z.object({
   audience: z.enum(["free", "paid"]),
@@ -230,7 +228,6 @@ export function PostSettings({
   tiers = [],
   paidAudienceTierIds = [],
 }: PostSettingsProps) {
-  const router = useRouter();
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -259,17 +256,6 @@ export function PostSettings({
     }
     if (data) {
       toast.success("Settings saved");
-      if (data.audience === "paid" && post.nostrEventId) {
-        const removed = await removeNostrPublicationForPaidPost({
-          nostrEventId: post.nostrEventId,
-          postId: post.id,
-        });
-        if (!removed.ok) {
-          toast.error(removed.error);
-        } else {
-          router.refresh();
-        }
-      }
     }
   }
 

@@ -13,7 +13,6 @@ export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   ckbAddress: text("ckb_address").notNull().unique(),
   fiberNodeRpcUrl: text("fiber_node_rpc_url"),
-  nostrPubkey: text("nostr_pubkey"),
   avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -138,7 +137,6 @@ export const posts = pgTable("posts", {
     .notNull()
     .$type<PostStatus>()
     .default("draft"),
-  nostrEventId: text("nostr_event_id"),
   audience: text("audience").$type<PostAudience>(),
   publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

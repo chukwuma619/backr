@@ -9,16 +9,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { getPostsByCreatorId } from "@/lib/db/queries";
 import { PostListItem } from "./post-list-item";
-import type { Tier } from "@/lib/db/schema";
 import type { Creator } from "@/lib/db/schema";
 
-export async function DashboardPostsSection({
-  creator,
-  tiers,
-}: {
-  creator: Creator;
-  tiers: Tier[];
-}) {
+export async function DashboardPostsSection({ creator }: { creator: Creator }) {
   const { data: posts, error } = await getPostsByCreatorId(creator.id);
 
   if (error) {
@@ -51,7 +44,7 @@ export async function DashboardPostsSection({
           {posts && posts.length > 0 ? (
             <ul className="space-y-4">
               {posts.map((post) => (
-                <PostListItem key={post.id} post={post} creator={creator} />
+                <PostListItem key={post.id} post={post} />
               ))}
             </ul>
           ) : (

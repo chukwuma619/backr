@@ -12,7 +12,7 @@ const features = [
     icon: FileText,
     title: "Exclusive posts",
     description:
-      "Create free or paid posts. Draft and publish on your schedule. Share to Nostr.",
+      "Create free or paid posts. Draft and publish on your schedule.",
   },
   {
     icon: Users,
@@ -34,9 +34,9 @@ const features = [
   },
   {
     icon: Sparkles,
-    title: "Nostr integration",
+    title: "Creator profiles",
     description:
-      "Publish posts to Nostr for broader reach. Your content, your audience.",
+      "Custom pages, collections, and tiers so fans can find and support you.",
   },
   {
     icon: Shield,

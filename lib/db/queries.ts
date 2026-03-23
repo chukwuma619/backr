@@ -296,7 +296,6 @@ export async function getCreatorByUserId(userId: string) {
     const [row] = await db
       .select({
         creator: creators,
-        userNostrPubkey: users.nostrPubkey,
         userAvatarUrl: users.avatarUrl,
         userFiberNodeRpcUrl: users.fiberNodeRpcUrl,
       })
@@ -308,7 +307,6 @@ export async function getCreatorByUserId(userId: string) {
     return {
       data: {
         ...row.creator,
-        nostrPubkey: row.userNostrPubkey,
         avatarUrl: row.userAvatarUrl,
         fiberNodeRpcUrl: row.userFiberNodeRpcUrl,
       },

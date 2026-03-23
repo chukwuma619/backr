@@ -21,11 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TiptapPostEditor } from "@/components/creator/tiptap-post-editor";
 import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
-import { updatePost, updatePostNostrEventId } from "@/app/actions/post";
-import { publishPostToNostr } from "@/lib/nostr/publish-post";
-import { shouldSyncPostToNostr } from "@/lib/nostr/sync-eligibility";
+import { updatePost } from "@/app/actions/post";
 import type { Post } from "@/lib/db/schema";
-import type { Creator } from "@/lib/db/schema";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required").max(200),
@@ -37,23 +34,17 @@ type FormValues = z.infer<typeof schema>;
 
 type EditPostDialogProps = {
   post: Post;
-  creator: Creator & { nostrPubkey?: string | null };
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
 export function EditPostDialog({
   post,
-  creator,
   open,
   onOpenChange,
 }: EditPostDialogProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [nostrStatus, setNostrStatus] = useState<
-    "idle" | "pending" | "success" | "error"
-  >("idle");
-  const [nostrError, setNostrError] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -74,8 +65,6 @@ export function EditPostDialog({
 
   async function onSave(values: FormValues) {
     setError(null);
-    setNostrError(null);
-    setNostrStatus("idle");
 
     const formData = new FormData();
     formData.set("title", values.title.trim());
@@ -97,51 +86,11 @@ export function EditPostDialog({
       return;
     }
 
-    if (
-      shouldSyncPostToNostr({
-        nostrPubkey: creator.nostrPubkey,
-        postStatus: post.status,
-        audience: post.audience ?? "free",
-      })
-    ) {
-      setNostrStatus("pending");
-
-      try {
-        const eventId = await publishPostToNostr({
-          postId: post.id,
-          title: values.title.trim(),
-          body: values.body.trim(),
-          publishedAt: new Date(post.publishedAt ?? post.createdAt),
-        });
-
-        const updateResult = await updatePostNostrEventId(post.id, eventId);
-
-        if (updateResult?.message) {
-          throw new Error(updateResult.message);
-        }
-
-        setNostrStatus("success");
-      } catch (err) {
-        setNostrStatus("error");
-        setNostrError(
-          err instanceof Error ? err.message : "Failed to update on Nostr"
-        );
-      }
-    }
-
     router.refresh();
   }
 
-  function handleOpenChange(next: boolean) {
-    if (!next) {
-      setNostrStatus("idle");
-      setNostrError(null);
-    }
-    onOpenChange(next);
-  }
-
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit post</DialogTitle>
@@ -184,9 +133,7 @@ export function EditPostDialog({
                     value={field.value ?? ""}
                     onChange={field.onChange}
                     preview="banner"
-                    disabled={
-                      form.formState.isSubmitting || nostrStatus === "pending"
-                    }
+                    disabled={form.formState.isSubmitting}
                   />
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
@@ -215,25 +162,11 @@ export function EditPostDialog({
               )}
             />
             <Field>
-              <Button
-                type="submit"
-                disabled={
-                  form.formState.isSubmitting || nostrStatus === "pending"
-                }
-              >
-                {form.formState.isSubmitting
-                  ? "Saving…"
-                  : nostrStatus === "pending"
-                    ? "Updating on Nostr…"
-                    : nostrStatus === "success"
-                      ? "Saved"
-                      : "Save"}
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "Saving…" : "Save"}
               </Button>
             </Field>
           </FieldGroup>
-          {nostrError && (
-            <p className="text-sm text-destructive">{nostrError}</p>
-          )}
         </form>
       </DialogContent>
     </Dialog>
