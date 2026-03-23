@@ -71,6 +71,13 @@
       "when": 1774046500000,
       "tag": "0009_collection_posts_many_to_many",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1774291381570,
+      "tag": "0010_broad_yellowjacket",
+      "breakpoints": true
     }
   ]
 }

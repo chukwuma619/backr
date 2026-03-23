@@ -41,7 +41,6 @@ export function CreatorSidebar({
 }: React.ComponentProps<typeof Sidebar> & {
   user: {
     ckbAddress: string;
-    userType: string;
   };
 }) {
   return (
@@ -62,7 +61,7 @@ export function CreatorSidebar({
        
       </SidebarContent>
       <SidebarFooter className="mt-10">
-        <NavUser user={user} />
+        <NavUser user={{ ...user, isCreator: true }} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

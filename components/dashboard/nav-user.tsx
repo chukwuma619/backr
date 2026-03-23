@@ -26,7 +26,7 @@ export function NavUser({
 }: {
   user: {
     ckbAddress: string;
-    userType: string;
+    isCreator: boolean;
   };
 }) {
   const { isMobile } = useSidebar();
@@ -59,7 +59,7 @@ export function NavUser({
                   {truncateAddress(user.ckbAddress)}
                 </span>
                 <span className="truncate text-xs text-muted-foreground">
-                 {user.userType}
+                  {user.isCreator ? "Creator account" : "Member account"}
                 </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
@@ -82,7 +82,7 @@ export function NavUser({
                     {truncateAddress(user.ckbAddress, 4, 4)}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {user.userType}
+                    {user.isCreator ? "Creator account" : "Member account"}
                   </span>
                 </div>
               </div>

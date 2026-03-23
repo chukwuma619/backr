@@ -14,7 +14,6 @@ export const users = pgTable("users", {
   ckbAddress: text("ckb_address").notNull().unique(),
   fiberNodeRpcUrl: text("fiber_node_rpc_url"),
   nostrPubkey: text("nostr_pubkey"),
-  userType: text("user_type").notNull().default("member"),
   avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

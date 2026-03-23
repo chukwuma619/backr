@@ -38,7 +38,6 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar> & {
   user: {
     ckbAddress: string;
-    userType: string;
   };
   isCreator?: boolean;
 }) {
@@ -60,7 +59,7 @@ export function AppSidebar({
         <BecomeACreatorForm isCreator={isCreator} />
       </SidebarContent>
       <SidebarFooter className="mt-10">
-        <NavUser user={user} />
+        <NavUser user={{ ...user, isCreator: !!isCreator }} />
       </SidebarFooter>
       <SidebarRail/>
     </Sidebar>

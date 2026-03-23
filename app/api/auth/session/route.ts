@@ -24,7 +24,6 @@ export async function GET() {
     user: {
       id: user.id,
       ckbAddress: user.ckbAddress,
-      userType: user.userType,
     },
   });
 }

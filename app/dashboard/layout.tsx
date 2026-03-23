@@ -28,7 +28,6 @@ export default async function DashboardLayout({
       <AppSidebar
         user={{
           ckbAddress: user.ckbAddress,
-          userType: user.userType,
         }}
         isCreator={!!creator}
         variant="inset"

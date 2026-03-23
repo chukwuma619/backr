@@ -30,7 +30,6 @@ export default async function CreatorLayout({
       <CreatorSidebar
         user={{
           ckbAddress: user.ckbAddress,
-          userType: user.userType,
         }}
         variant="inset"
       />
