@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,7 +20,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { LayoutDashboard } from "lucide-react";
 
 type BecomeACreatorFormProps = {
   isCreator?: boolean;
@@ -31,27 +29,7 @@ export function BecomeACreatorForm({ isCreator }: BecomeACreatorFormProps) {
   const router = useRouter();
 
   if (isCreator) {
-    return (
-      <Card className="gap-2 py-4 shadow-none mt-auto">
-        <CardHeader className="px-4">
-          <CardTitle className="text-sm">Creator dashboard</CardTitle>
-          <CardDescription>
-            Manage your membership, posts, and audience
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="px-4">
-          <Link href="/creator" className="grid gap-2.5">
-            <Button
-              className="w-full gap-2 bg-sidebar-primary text-sidebar-primary-foreground shadow-none"
-              size="sm"
-            >
-              <LayoutDashboard className="size-4" />
-              Open creator dashboard
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   return (
