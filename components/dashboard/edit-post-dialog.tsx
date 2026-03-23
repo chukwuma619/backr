@@ -23,6 +23,7 @@ import { TiptapPostEditor } from "@/components/creator/tiptap-post-editor";
 import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
 import { updatePost, updatePostNostrEventId } from "@/app/actions/post";
 import { publishPostToNostr } from "@/lib/nostr/publish-post";
+import { shouldSyncPostToNostr } from "@/lib/nostr/sync-eligibility";
 import type { Post } from "@/lib/db/schema";
 import type { Creator } from "@/lib/db/schema";
 
@@ -76,11 +77,6 @@ export function EditPostDialog({
     setNostrError(null);
     setNostrStatus("idle");
 
-    if (!creator.nostrPubkey) {
-      setError("Connect Nostr in your profile to save posts.");
-      return;
-    }
-
     const formData = new FormData();
     formData.set("title", values.title.trim());
     formData.set("body", values.body.trim());
@@ -101,30 +97,39 @@ export function EditPostDialog({
       return;
     }
 
-    setNostrStatus("pending");
+    if (
+      shouldSyncPostToNostr({
+        nostrPubkey: creator.nostrPubkey,
+        postStatus: post.status,
+        audience: post.audience ?? "free",
+      })
+    ) {
+      setNostrStatus("pending");
 
-    try {
-      const eventId = await publishPostToNostr({
-        postId: post.id,
-        title: values.title.trim(),
-        body: values.body.trim(),
-        publishedAt: new Date(post.publishedAt ?? post.createdAt),
-      });
+      try {
+        const eventId = await publishPostToNostr({
+          postId: post.id,
+          title: values.title.trim(),
+          body: values.body.trim(),
+          publishedAt: new Date(post.publishedAt ?? post.createdAt),
+        });
 
-      const updateResult = await updatePostNostrEventId(post.id, eventId);
+        const updateResult = await updatePostNostrEventId(post.id, eventId);
 
-      if (updateResult?.message) {
-        throw new Error(updateResult.message);
+        if (updateResult?.message) {
+          throw new Error(updateResult.message);
+        }
+
+        setNostrStatus("success");
+      } catch (err) {
+        setNostrStatus("error");
+        setNostrError(
+          err instanceof Error ? err.message : "Failed to update on Nostr"
+        );
       }
-
-      setNostrStatus("success");
-      router.refresh();
-    } catch (err) {
-      setNostrStatus("error");
-      setNostrError(
-        err instanceof Error ? err.message : "Failed to update on Nostr"
-      );
     }
+
+    router.refresh();
   }
 
   function handleOpenChange(next: boolean) {
@@ -213,9 +218,7 @@ export function EditPostDialog({
               <Button
                 type="submit"
                 disabled={
-                  form.formState.isSubmitting ||
-                  nostrStatus === "pending" ||
-                  !creator.nostrPubkey
+                  form.formState.isSubmitting || nostrStatus === "pending"
                 }
               >
                 {form.formState.isSubmitting

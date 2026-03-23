@@ -15,6 +15,7 @@ import {
 import { validateSlug } from "@/lib/creators/slug";
 import { getCreatorForDashboard } from "@/lib/creators/get-creator-for-dashboard";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { normalizeNostrPubkeyHex } from "@/lib/nostr/normalize-pubkey";
 import { DISCOVER_TOPICS } from "@/lib/discover/constants";
 
 const DISCOVER_TOPICS_MAP = Object.fromEntries(
@@ -235,12 +236,19 @@ export async function updateCreatorNostrPubkey(
   userId: string,
   nostrPubkey: string,
 ) {
-  try {
-    const hex = nostrPubkey.trim();
-    if (!/^[a-fA-F0-9]{64}$/.test(hex)) {
-      return { data: null, error: new Error("Invalid Nostr public key") };
-    }
+  const sessionUser = await getCurrentUser();
+  if (!sessionUser || sessionUser.id !== userId) {
+    return { data: null, error: new Error("Unauthorized") };
+  }
 
+  let hex: string;
+  try {
+    hex = normalizeNostrPubkeyHex(nostrPubkey);
+  } catch {
+    return { data: null, error: new Error("Invalid Nostr public key") };
+  }
+
+  try {
     const [user] = await db
       .update(users)
       .set({ nostrPubkey: hex, updatedAt: new Date() })

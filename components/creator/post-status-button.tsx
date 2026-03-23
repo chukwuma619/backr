@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { updatePostStatus } from "@/app/actions/post";
@@ -12,6 +13,7 @@ type PostStatusButtonProps = {
 };
 
 export function PostStatusButton({ postId, status }: PostStatusButtonProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const nextStatus: PostStatus = status === "draft" ? "published" : "draft";
@@ -28,6 +30,7 @@ export function PostStatusButton({ postId, status }: PostStatusButtonProps) {
         toast.success(
           data.status === "published" ? "Post published" : "Post unpublished"
         );
+        router.refresh();
       }
     });
   }

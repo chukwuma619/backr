@@ -20,7 +20,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { updateAccount, updateAccountNostrPubkey } from "@/app/actions/account";
+import {
+  updateAccount,
+  updateAccountNostrPubkey,
+  clearNostrPubkeyForCurrentUser,
+} from "@/app/actions/account";
 import { getNostrPublicKey } from "@/lib/nostr/publish-post";
 import { truncateAddress } from "@/lib/utils";
 import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
@@ -44,9 +48,9 @@ type BasicSettingsFormProps = {
 export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [nostrStatus, setNostrStatus] = useState<
-    "idle" | "pending" | "success" | "error"
-  >("idle");
+  const [nostrPending, setNostrPending] = useState<
+    false | "connect" | "disconnect"
+  >(false);
   const [nostrError, setNostrError] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
@@ -81,20 +85,38 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
 
   async function handleConnectNostr() {
     setNostrError(null);
-    setNostrStatus("pending");
+    setNostrPending("connect");
     try {
       const pubkey = await getNostrPublicKey();
       const result = await updateAccountNostrPubkey(pubkey);
       if (result?.error) {
         throw result.error;
       }
-      setNostrStatus("success");
       router.refresh();
     } catch (err) {
-      setNostrStatus("error");
       setNostrError(
         err instanceof Error ? err.message : "Failed to connect Nostr"
       );
+    } finally {
+      setNostrPending(false);
+    }
+  }
+
+  async function handleDisconnectNostr() {
+    setNostrError(null);
+    setNostrPending("disconnect");
+    try {
+      const result = await clearNostrPubkeyForCurrentUser();
+      if (result?.error) {
+        throw result.error;
+      }
+      router.refresh();
+    } catch (err) {
+      setNostrError(
+        err instanceof Error ? err.message : "Failed to disconnect Nostr"
+      );
+    } finally {
+      setNostrPending(false);
     }
   }
 
@@ -187,21 +209,35 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
                     ? `Connected: ${data.nostrPubkey.slice(0, 12)}…${data.nostrPubkey.slice(-6)}`
                     : "Connect a Nostr extension (e.g. nos2x) to link your identity."}
                 </p>
-                <Button
-                  type="button"
-                  variant={data.nostrPubkey ? "outline" : "default"}
-                  size="sm"
-                  onClick={handleConnectNostr}
-                  disabled={nostrStatus === "pending"}
-                >
-                  {nostrStatus === "pending"
-                    ? "Connecting…"
-                    : nostrStatus === "success"
-                      ? "Connected"
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant={data.nostrPubkey ? "outline" : "default"}
+                    size="sm"
+                    onClick={handleConnectNostr}
+                    disabled={nostrPending !== false}
+                  >
+                    {nostrPending === "connect"
+                      ? "Connecting…"
                       : data.nostrPubkey
                         ? "Reconnect"
                         : "Connect Nostr"}
-                </Button>
+                  </Button>
+                  {data.nostrPubkey ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground"
+                      onClick={handleDisconnectNostr}
+                      disabled={nostrPending !== false}
+                    >
+                      {nostrPending === "disconnect"
+                        ? "Disconnecting…"
+                        : "Disconnect"}
+                    </Button>
+                  ) : null}
+                </div>
                 {nostrError && (
                   <p className="text-sm text-destructive mt-2">{nostrError}</p>
                 )}

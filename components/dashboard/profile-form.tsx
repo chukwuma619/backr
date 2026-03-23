@@ -29,9 +29,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { updateCreatorProfile, updateCreatorNostrPubkeyFromSession } from "@/app/actions/creator";
+import { updateCreatorProfile } from "@/app/actions/creator";
 import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
-import { getNostrPublicKey } from "@/lib/nostr/publish-post";
 import type { Creator } from "@/lib/db/schema";
 
 const schema = z.object({
@@ -59,16 +58,11 @@ export function ProfileForm({
   data: Creator & {
     avatarUrl?: string | null;
     fiberNodeRpcUrl?: string | null;
-    nostrPubkey?: string | null;
     category?: string | null;
   };
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [nostrStatus, setNostrStatus] = useState<
-    "idle" | "pending" | "success" | "error"
-  >("idle");
-  const [nostrError, setNostrError] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -107,25 +101,6 @@ export function ProfileForm({
       return;
     }
     router.refresh();
-  }
-
-  async function handleConnectNostr() {
-    setNostrError(null);
-    setNostrStatus("pending");
-    try {
-      const pubkey = await getNostrPublicKey();
-      const result = await updateCreatorNostrPubkeyFromSession(pubkey);
-      if (result?.error) {
-        throw result.error;
-      }
-      setNostrStatus("success");
-      router.refresh();
-    } catch (err) {
-      setNostrStatus("error");
-      setNostrError(
-        err instanceof Error ? err.message : "Failed to connect Nostr"
-      );
-    }
   }
 
   return (
@@ -267,34 +242,7 @@ export function ProfileForm({
                 </Field>
               )}
             />
-            <Field>
-              <p className="text-sm font-medium mb-1">
-                Nostr (for publishing posts)
-              </p>
-              <p className="text-xs text-muted-foreground mb-2">
-                {data.nostrPubkey
-                  ? `Connected: ${data.nostrPubkey.slice(0, 12)}…${data.nostrPubkey.slice(-6)}`
-                  : "Connect a Nostr extension (e.g. nos2x) to publish posts."}
-              </p>
-              <Button
-                type="button"
-                variant={data.nostrPubkey ? "outline" : "default"}
-                size="sm"
-                onClick={handleConnectNostr}
-                disabled={nostrStatus === "pending"}
-              >
-                {nostrStatus === "pending"
-                  ? "Connecting…"
-                  : nostrStatus === "success"
-                    ? "Connected"
-                    : data.nostrPubkey
-                      ? "Reconnect"
-                      : "Connect Nostr"}
-              </Button>
-              {nostrError && (
-                <p className="text-sm text-destructive mt-2">{nostrError}</p>
-              )}
-            </Field>
+
             <Field>
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? "Saving…" : "Save"}

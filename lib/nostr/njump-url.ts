@@ -1,11 +1,19 @@
-import { noteEncode } from "nostr-tools/nip19";
+import { neventEncode } from "nostr-tools/nip19";
+
+import { DEFAULT_NOSTR_RELAYS } from "@/lib/nostr/default-relays";
+
+const NJUMP_RELAYS = [...DEFAULT_NOSTR_RELAYS];
 
 /** Nostr gateway config: base URL and how to build event link. */
 export const NOSTR_SHARE_GATEWAYS = [
   {
     name: "njump.me",
     url: (eventId: string) =>
-      `https://njump.me/${noteEncode(eventId)}`,
+      `https://njump.me/${neventEncode({
+        id: eventId,
+        kind: 30023,
+        relays: NJUMP_RELAYS,
+      })}`,
   },
   {
     name: "nostr.band",

@@ -5,6 +5,9 @@
 
 import { SimplePool, type EventTemplate, type VerifiedEvent } from "nostr-tools";
 
+import { DEFAULT_NOSTR_RELAYS } from "@/lib/nostr/default-relays";
+import { normalizeNostrPubkeyHex } from "@/lib/nostr/normalize-pubkey";
+
 declare global {
   interface Window {
     nostr?: {
@@ -13,12 +16,6 @@ declare global {
     };
   }
 }
-
-const RELAYS = [
-  "wss://relay.damus.io",
-  "wss://relay.nostr.band",
-  "wss://nos.lol",
-];
 
 export type PublishPostParams = {
   postId: string | number;
@@ -54,7 +51,8 @@ export async function getNostrPublicKey(): Promise<string> {
       "Nostr extension (e.g. nos2x) not found. Install one to connect."
     );
   }
-  return window.nostr.getPublicKey();
+  const raw = await window.nostr.getPublicKey();
+  return normalizeNostrPubkeyHex(raw);
 }
 
 export async function publishPostToNostr(
@@ -69,9 +67,44 @@ export async function publishPostToNostr(
   const signed = await window.nostr.signEvent(template);
   const pool = new SimplePool();
   try {
-    await Promise.all(pool.publish(RELAYS, signed));
+    await Promise.all(pool.publish([...DEFAULT_NOSTR_RELAYS], signed));
     return signed.id;
   } finally {
-    pool.close(RELAYS);
+    pool.close([...DEFAULT_NOSTR_RELAYS]);
+  }
+}
+
+const NIP23_KIND = 30023;
+
+/**
+ * NIP-09 deletion request (kind 5). Relays that support it hide the target event.
+ * Call from browser only (NIP-07).
+ */
+export async function deleteNostrEvent(eventIdHex: string): Promise<void> {
+  if (typeof window === "undefined" || !window.nostr) {
+    throw new Error(
+      "Nostr extension (e.g. nos2x) not found. Install one to remove this post from relays."
+    );
+  }
+  const id = eventIdHex.trim();
+  if (!id) {
+    throw new Error("Missing Nostr event id");
+  }
+  const template: EventTemplate = {
+    kind: 5,
+    created_at: Math.floor(Date.now() / 1000),
+    tags: [
+      ["e", id],
+      ["k", String(NIP23_KIND)],
+    ],
+    content:
+      "This post is no longer public on Nostr (paid-only on Backr).",
+  };
+  const signed = await window.nostr.signEvent(template);
+  const pool = new SimplePool();
+  try {
+    await Promise.all(pool.publish([...DEFAULT_NOSTR_RELAYS], signed));
+  } finally {
+    pool.close([...DEFAULT_NOSTR_RELAYS]);
   }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
@@ -29,11 +30,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DISCOVER_TOPICS } from "@/lib/discover/constants";
-import {
-  updateCreatorProfile,
-  updateCreatorNostrPubkeyFromSession,
-} from "@/app/actions/creator";
-import { getNostrPublicKey } from "@/lib/nostr/publish-post";
+import { updateCreatorProfile } from "@/app/actions/creator";
 import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
 
 const schema = z.object({
@@ -74,10 +71,6 @@ type BasicSettingsFormProps = {
 export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [nostrStatus, setNostrStatus] = useState<
-    "idle" | "pending" | "success" | "error"
-  >("idle");
-  const [nostrError, setNostrError] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -120,25 +113,6 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
       return;
     }
     router.refresh();
-  }
-
-  async function handleConnectNostr() {
-    setNostrError(null);
-    setNostrStatus("pending");
-    try {
-      const pubkey = await getNostrPublicKey();
-      const result = await updateCreatorNostrPubkeyFromSession(pubkey);
-      if (result?.error) {
-        throw result.error;
-      }
-      setNostrStatus("success");
-      router.refresh();
-    } catch (err) {
-      setNostrStatus("error");
-      setNostrError(
-        err instanceof Error ? err.message : "Failed to connect Nostr"
-      );
-    }
   }
 
   return (
@@ -308,32 +282,20 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
               )}
             />
             <Field>
-              <p className="text-sm font-medium mb-1">
-                Nostr (for publishing posts)
-              </p>
-              <p className="text-xs text-muted-foreground mb-2">
+              <p className="text-sm font-medium mb-1">Nostr</p>
+              <p className="text-xs text-muted-foreground">
                 {data.nostrPubkey
-                  ? `Connected: ${data.nostrPubkey.slice(0, 12)}…${data.nostrPubkey.slice(-6)}`
-                  : "Connect a Nostr extension (e.g. nos2x) to publish posts."}
+                  ? `Connected: ${data.nostrPubkey.slice(0, 12)}…${data.nostrPubkey.slice(-6)}. `
+                  : "Not connected. "}
+                Connect or disconnect in{" "}
+                <Link
+                  href="/dashboard/settings/basic"
+                  className="text-primary font-medium underline-offset-4 hover:underline"
+                >
+                  Account settings
+                </Link>
+                .
               </p>
-              <Button
-                type="button"
-                variant={data.nostrPubkey ? "outline" : "default"}
-                size="sm"
-                onClick={handleConnectNostr}
-                disabled={nostrStatus === "pending"}
-              >
-                {nostrStatus === "pending"
-                  ? "Connecting…"
-                  : nostrStatus === "success"
-                    ? "Connected"
-                    : data.nostrPubkey
-                      ? "Reconnect"
-                      : "Connect Nostr"}
-              </Button>
-              {nostrError && (
-                <p className="text-sm text-destructive mt-2">{nostrError}</p>
-              )}
             </Field>
             <Field>
               <Button type="submit" disabled={form.formState.isSubmitting}>
