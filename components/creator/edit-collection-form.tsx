@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -15,10 +16,14 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
 
 export function EditCollectionForm({ collection }: { collection: CreatorCollection }) {
   const router = useRouter();
   const id = String(collection.id);
+  const [coverImageUrl, setCoverImageUrl] = useState(
+    collection.coverImageUrl ?? ""
+  );
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -57,6 +62,7 @@ export function EditCollectionForm({ collection }: { collection: CreatorCollecti
   return (
     <div className="space-y-6">
       <form onSubmit={onSubmit} className="space-y-4 rounded-lg border p-4">
+        <input type="hidden" name="coverImageUrl" value={coverImageUrl} />
         <p className="font-medium">Edit collection</p>
         <p className="text-muted-foreground text-sm">
           Public URL:{" "}
@@ -88,15 +94,12 @@ export function EditCollectionForm({ collection }: { collection: CreatorCollecti
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="edit-collection-cover">
-              Cover image URL (optional)
-            </FieldLabel>
-            <Input
+            <PinataImageUploadField
               id="edit-collection-cover"
-              name="coverImageUrl"
-              type="url"
-              placeholder="https://..."
-              defaultValue={collection.coverImageUrl ?? ""}
+              label="Cover image (optional)"
+              value={coverImageUrl}
+              onChange={setCoverImageUrl}
+              preview="banner"
             />
           </Field>
         </FieldGroup>

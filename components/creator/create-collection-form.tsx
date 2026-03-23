@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createCreatorCollection } from "@/app/actions/collections";
@@ -11,9 +12,11 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
 
 export function CreateCollectionForm() {
   const router = useRouter();
+  const [coverImageUrl, setCoverImageUrl] = useState("");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -22,6 +25,7 @@ export function CreateCollectionForm() {
     if ("ok" in result && result.ok) {
       toast.success("Collection created");
       e.currentTarget.reset();
+      setCoverImageUrl("");
       router.refresh();
       return;
     }
@@ -38,6 +42,7 @@ export function CreateCollectionForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4 rounded-lg border p-4">
+      <input type="hidden" name="coverImageUrl" value={coverImageUrl} />
       <p className="font-medium">New collection</p>
       <FieldGroup>
         <Field>
@@ -63,14 +68,12 @@ export function CreateCollectionForm() {
           />
         </Field>
         <Field>
-          <FieldLabel htmlFor="new-collection-cover">
-            Cover image URL (optional)
-          </FieldLabel>
-          <Input
+          <PinataImageUploadField
             id="new-collection-cover"
-            name="coverImageUrl"
-            type="url"
-            placeholder="https://..."
+            label="Cover image (optional)"
+            value={coverImageUrl}
+            onChange={setCoverImageUrl}
+            preview="banner"
           />
         </Field>
       </FieldGroup>

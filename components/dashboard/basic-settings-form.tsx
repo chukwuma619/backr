@@ -23,6 +23,7 @@ import {
 import { updateAccount, updateAccountNostrPubkey } from "@/app/actions/account";
 import { getNostrPublicKey } from "@/lib/nostr/publish-post";
 import { truncateAddress } from "@/lib/utils";
+import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
 
 const schema = z.object({
   avatarUrl: z.string().max(500).optional(),
@@ -144,15 +145,13 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
                 name="avatarUrl"
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="basic-settings-avatarUrl">
-                      Avatar URL (optional)
-                    </FieldLabel>
-                    <Input
-                      id="basic-settings-avatarUrl"
-                      type="url"
-                      placeholder="https://..."
-                      {...field}
-                      aria-invalid={fieldState.invalid}
+                    <PinataImageUploadField
+                      id="dashboard-basic-settings-avatarUrl"
+                      label="Profile avatar (optional)"
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      preview="square"
+                      disabled={form.formState.isSubmitting}
                     />
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />

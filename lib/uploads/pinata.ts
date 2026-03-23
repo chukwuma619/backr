@@ -2,7 +2,7 @@
 
 import { pinata } from "@/lib/pinata-config";
 
-const DEFAULT_SIGNED_UPLOAD_TTL_SECONDS = 30;
+const DEFAULT_SIGNED_UPLOAD_TTL_SECONDS = 300;
 
 export async function createPinataSignedUploadUrl(
   expiresInSeconds: number = DEFAULT_SIGNED_UPLOAD_TTL_SECONDS

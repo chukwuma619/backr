@@ -36,20 +36,26 @@ const updateSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   body: z.string().min(1, "Body is required").max(50000),
   status: z.enum(["draft", "published"]).default("draft"),
+  coverImageUrl: z.string().max(500).optional(),
 });
 
 export async function updatePost(
   postId: number,
   formData: FormData,
 ) {
+  const hasCoverKey = formData.has("coverImageUrl");
   const raw = {
     title: formData.get("title") as string,
     body: formData.get("body") as string,
+    coverImageUrl: hasCoverKey
+      ? ((formData.get("coverImageUrl") as string) ?? "").trim() || undefined
+      : undefined,
   };
 
   const parsed = updateSchema.safeParse({
     title: raw.title?.trim(),
     body: raw.body?.trim(),
+    coverImageUrl: raw.coverImageUrl,
   });
 
   if (!parsed.success) {
@@ -64,6 +70,9 @@ export async function updatePost(
     .set({
       title: parsed.data.title,
       content: parsed.data.body,
+      ...(hasCoverKey
+        ? { coverImageUrl: parsed.data.coverImageUrl?.trim() || null }
+        : {}),
       updatedAt: new Date(),
     })
     .where(eq(posts.id, postId))
@@ -195,6 +204,7 @@ export async function updatePostStatus(
 const updateWithSettingsSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   body: z.string().min(1, "Content is required").max(50000),
+  coverImageUrl: z.string().max(500).optional(),
   audience: z.enum(["free", "paid"]),
   minTierId: z.string(),
 });
@@ -209,6 +219,7 @@ export async function updatePostWithSettings(
   const raw = {
     title: (formData.get("title") as string)?.trim(),
     body: (formData.get("body") as string)?.trim(),
+    coverImageUrl: ((formData.get("coverImageUrl") as string) ?? "").trim() || undefined,
     audience: formData.get("audience") as string,
     minTierId: (formData.get("minTierId") as string) ?? "",
   };
@@ -219,7 +230,7 @@ export async function updatePostWithSettings(
     return { data: null, error: { message: msg ?? "Invalid" } };
   }
 
-  const { title, body, audience, minTierId } = parsed.data;
+  const { title, body, coverImageUrl, audience, minTierId } = parsed.data;
 
   const collectionIdsRaw = formData.getAll("collectionIds") as string[];
   const collectionIds = [
@@ -245,6 +256,7 @@ export async function updatePostWithSettings(
       .set({
         title,
         content: body,
+        coverImageUrl: coverImageUrl?.trim() || null,
         audience: audience as "free" | "paid",
         updatedAt: new Date(),
       })

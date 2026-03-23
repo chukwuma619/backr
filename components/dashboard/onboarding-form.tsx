@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createCreatorFromSession } from "@/app/actions/creator";
+import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
 
 const schema = z.object({
   slug: z
@@ -61,7 +62,7 @@ export function OnboardingForm() {
     formData.set("slug", values.slug.trim().toLowerCase());
     formData.set("displayName", values.displayName.trim());
     if (values.bio) formData.set("bio", values.bio.trim());
-    if (values.avatarUrl) formData.set("avatarUrl", values.avatarUrl.trim());
+    formData.set("avatarUrl", values.avatarUrl?.trim() ?? "");
     formData.set("topics", JSON.stringify(["tech"]));
 
     const result = await createCreatorFromSession(formData);
@@ -163,15 +164,13 @@ export function OnboardingForm() {
               name="avatarUrl"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="onboarding-form-avatarUrl">
-                    Avatar URL (optional)
-                  </FieldLabel>
-                  <Input
+                  <PinataImageUploadField
                     id="onboarding-form-avatarUrl"
-                    placeholder="https://..."
-                    type="url"
-                    {...field}
-                    aria-invalid={fieldState.invalid}
+                    label="Profile avatar (optional)"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    preview="square"
+                    disabled={form.formState.isSubmitting}
                   />
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />

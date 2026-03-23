@@ -14,11 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { createTier, updateTier } from "@/app/actions/tiers";
+import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
   amount: z.string().min(1, "Amount is required").max(50),
+  coverImageUrl: z.string().max(500).optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -28,6 +30,7 @@ type TierForForm = {
   name: string;
   description: string;
   amount: string;
+  coverImageUrl?: string | null;
 };
 
 export function TierForm({
@@ -46,11 +49,13 @@ export function TierForm({
           name: tier.name,
           description: tier.description || "",
           amount: tier.amount,
+          coverImageUrl: tier.coverImageUrl ?? "",
         }
       : {
           name: "",
           description: "",
           amount: "",
+          coverImageUrl: "",
         },
   });
 
@@ -60,6 +65,7 @@ export function TierForm({
     formData.set("name", values.name.trim());
     if (values.description) formData.set("description", values.description.trim());
     formData.set("amount", values.amount.trim());
+    formData.set("coverImageUrl", values.coverImageUrl?.trim() ?? "");
 
     const result = tier
       ? await updateTier(tier.id, {} as never, formData)
@@ -82,6 +88,7 @@ export function TierForm({
         name: "",
         description: "",
         amount: "",
+        coverImageUrl: "",
       });
     }
     onSuccess?.();
@@ -125,6 +132,26 @@ export function TierForm({
                 id="tier-form-description"
                 {...field}
                 aria-invalid={fieldState.invalid}
+              />
+              {fieldState.invalid && (
+                <FieldError errors={[fieldState.error]} />
+              )}
+            </Field>
+          )}
+        />
+        <Controller
+          control={form.control}
+          name="coverImageUrl"
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <PinataImageUploadField
+                id="tier-form-coverImageUrl"
+                label="Cover image (optional)"
+                description="Shown on your public membership page for this tier."
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                preview="banner"
+                disabled={form.formState.isSubmitting}
               />
               {fieldState.invalid && (
                 <FieldError errors={[fieldState.error]} />

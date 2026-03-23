@@ -11,6 +11,7 @@ const tierSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
   amount: z.string().min(1, "Amount is required").max(50),
+  coverImageUrl: z.string().max(500).optional(),
 });
 
 export type CreateTierState = {
@@ -31,12 +32,14 @@ export async function createTier(
     name: formData.get("name") as string,
     description: formData.get("description") as string,
     amount: formData.get("amount") as string,
+    coverImageUrl: (formData.get("coverImageUrl") as string) ?? "",
   };
 
   const parsed = tierSchema.safeParse({
     name: raw.name?.trim(),
     description: raw.description?.trim() || undefined,
     amount: raw.amount?.trim(),
+    coverImageUrl: raw.coverImageUrl?.trim() || undefined,
   });
 
   if (!parsed.success) {
@@ -51,6 +54,7 @@ export async function createTier(
       name: parsed.data.name,
       description: parsed.data.description ?? null,
       amount: parsed.data.amount,
+      coverImageUrl: parsed.data.coverImageUrl?.trim() || null,
     });
     revalidatePath("/creator/settings/membership-plan");
   } catch (error) {
@@ -73,12 +77,14 @@ export async function updateTier(
     name: formData.get("name") as string,
     description: formData.get("description") as string,
     amount: formData.get("amount") as string,
+    coverImageUrl: (formData.get("coverImageUrl") as string) ?? "",
   };
 
   const parsed = tierSchema.safeParse({
     name: raw.name?.trim(),
     description: raw.description?.trim() || undefined,
     amount: raw.amount?.trim(),
+    coverImageUrl: raw.coverImageUrl?.trim() || undefined,
   });
 
   if (!parsed.success) {
@@ -94,6 +100,7 @@ export async function updateTier(
         name: parsed.data.name,
         description: parsed.data.description ?? null,
         amount: parsed.data.amount,
+        coverImageUrl: parsed.data.coverImageUrl?.trim() || null,
         updatedAt: new Date(),
       })
       .where(and(eq(tiers.id, tierId), eq(tiers.creatorId, creator.id)))

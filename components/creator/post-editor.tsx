@@ -16,6 +16,7 @@ const DEBOUNCE_MS = 600;
 const formSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   body: z.string().min(1, "Content is required").max(50000),
+  coverImageUrl: z.string().max(500),
   audience: z.enum(["free", "paid"]),
   minTierId: z.string(),
   collectionIds: z.array(z.string()),
@@ -60,6 +61,7 @@ export function PostEditor({
     defaultValues: {
       title: post.title ?? "",
       body: post.content ?? "",
+      coverImageUrl: post.coverImageUrl ?? "",
       audience: (post.audience ?? "free") as "free" | "paid",
       minTierId: defaultMinTierId(post.audience ?? null, paidAudienceTierIds, tiers),
       collectionIds: postCollectionIds.map(String),
@@ -80,6 +82,7 @@ export function PostEditor({
       const formData = new FormData();
       formData.set("title", values.title.trim());
       formData.set("body", values.body.trim());
+      formData.set("coverImageUrl", values.coverImageUrl?.trim() ?? "");
       formData.set("audience", values.audience);
       formData.set("minTierId", values.audience === "paid" ? values.minTierId : "");
       values.collectionIds.forEach((id) => formData.append("collectionIds", id));

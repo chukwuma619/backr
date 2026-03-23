@@ -122,6 +122,14 @@ export async function createCreator(
     );
   }
 
+  await db
+    .update(users)
+    .set({
+      avatarUrl: parsed.data.avatarUrl?.trim() || null,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId));
+
   revalidatePath("/creator");
   redirect("/creator");
 }

@@ -34,6 +34,7 @@ import {
   updateCreatorNostrPubkeyFromSession,
 } from "@/app/actions/creator";
 import { getNostrPublicKey } from "@/lib/nostr/publish-post";
+import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
 
 const schema = z.object({
   slug: z
@@ -99,9 +100,8 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
     if (values.bio) formData.set("bio", values.bio.trim());
     if (values.category && values.category !== CATEGORY_NONE)
       formData.set("topics", JSON.stringify([values.category]));
-    if (values.avatarUrl) formData.set("avatarUrl", values.avatarUrl.trim());
-    if (values.coverImageUrl)
-      formData.set("coverImageUrl", values.coverImageUrl.trim());
+    formData.set("avatarUrl", values.avatarUrl?.trim() ?? "");
+    formData.set("coverImageUrl", values.coverImageUrl?.trim() ?? "");
     if (values.fiberNodeRpcUrl)
       formData.set("fiberNodeRpcUrl", values.fiberNodeRpcUrl.trim());
 
@@ -252,15 +252,13 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
               name="avatarUrl"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="basic-settings-avatarUrl">
-                    Avatar URL (optional)
-                  </FieldLabel>
-                  <Input
+                  <PinataImageUploadField
                     id="basic-settings-avatarUrl"
-                    type="url"
-                    placeholder="https://..."
-                    {...field}
-                    aria-invalid={fieldState.invalid}
+                    label="Profile avatar (optional)"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    preview="square"
+                    disabled={form.formState.isSubmitting}
                   />
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
@@ -273,19 +271,15 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
               name="coverImageUrl"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="basic-settings-coverImageUrl">
-                    Public cover image URL (optional)
-                  </FieldLabel>
-                  <Input
+                  <PinataImageUploadField
                     id="basic-settings-coverImageUrl"
-                    type="url"
-                    placeholder="https://..."
-                    {...field}
-                    aria-invalid={fieldState.invalid}
+                    label="Public cover image (optional)"
+                    description={`Shown on your public profile at /c/${form.watch("slug") || "username"}`}
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    preview="banner"
+                    disabled={form.formState.isSubmitting}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Shown on your public profile at /c/{form.watch("slug") || "username"}
-                  </p>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}

@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TiptapPostEditor } from "@/components/creator/tiptap-post-editor";
+import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
 import { updatePost, updatePostNostrEventId } from "@/app/actions/post";
 import { publishPostToNostr } from "@/lib/nostr/publish-post";
 import type { Post } from "@/lib/db/schema";
@@ -28,6 +29,7 @@ import type { Creator } from "@/lib/db/schema";
 const schema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   body: z.string().min(1, "Body is required").max(50000),
+  coverImageUrl: z.string().max(500).optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -57,6 +59,7 @@ export function EditPostDialog({
     defaultValues: {
       title: post.title,
       body: post.content ?? "",
+      coverImageUrl: post.coverImageUrl ?? "",
     },
   });
 
@@ -64,8 +67,9 @@ export function EditPostDialog({
     form.reset({
       title: post.title,
       body: post.content ?? "",
+      coverImageUrl: post.coverImageUrl ?? "",
     });
-  }, [post.id, post.title, post.content, form]);
+  }, [post.id, post.title, post.content, post.coverImageUrl, form]);
 
   async function onSave(values: FormValues) {
     setError(null);
@@ -80,6 +84,7 @@ export function EditPostDialog({
     const formData = new FormData();
     formData.set("title", values.title.trim());
     formData.set("body", values.body.trim());
+    formData.set("coverImageUrl", values.coverImageUrl?.trim() ?? "");
 
     const result = await updatePost(post.id, formData);
 
@@ -156,6 +161,27 @@ export function EditPostDialog({
                     placeholder="Post title"
                     {...field}
                     aria-invalid={fieldState.invalid}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+            <Controller
+              control={form.control}
+              name="coverImageUrl"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <PinataImageUploadField
+                    id="edit-post-dialog-coverImageUrl"
+                    label="Cover image (optional)"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    preview="banner"
+                    disabled={
+                      form.formState.isSubmitting || nostrStatus === "pending"
+                    }
                   />
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />

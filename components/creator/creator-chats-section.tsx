@@ -1,8 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  type ChangeEvent,
+} from "react";
 import { format } from "date-fns";
-import { MessageCircle, Users, Send, Lock, Globe, MessageCirclePlus } from "lucide-react";
+import { MessageCircle, Users, Send, Lock, Globe, MessageCirclePlus, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -24,6 +30,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { uploadImageToPinata } from "@/lib/uploads/pinata-client-upload";
 import { DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuTrigger } from "../ui/dropdown-menu";
 
 type CreatorChatItem = {
@@ -88,6 +95,9 @@ export function CreatorChatsSection({
   const [groupAudience, setGroupAudience] = useState<"free" | "paid">("free");
   const [groupMinTierId, setGroupMinTierId] = useState("");
   const [groupImageUrl, setGroupImageUrl] = useState("");
+  const [groupImageUploading, setGroupImageUploading] = useState(false);
+  const [groupImageUploadError, setGroupImageUploadError] = useState<string | null>(null);
+  const groupImageFileInputRef = useRef<HTMLInputElement>(null);
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [startingDM, setStartingDM] = useState(false);
   const [selectedChatType, setSelectedChatType] = useState<"group" | "direct">("group");
@@ -192,6 +202,33 @@ export function CreatorChatsSection({
     }
   };
 
+  const clearGroupChatImage = () => {
+    setGroupImageUrl("");
+    setGroupImageUploadError(null);
+    if (groupImageFileInputRef.current) {
+      groupImageFileInputRef.current.value = "";
+    }
+  };
+
+  const handleGroupImageFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setGroupImageUploadError(null);
+    setGroupImageUploading(true);
+    try {
+      const url = await uploadImageToPinata(file);
+      setGroupImageUrl(url);
+    } catch (err) {
+      setGroupImageUrl("");
+      if (groupImageFileInputRef.current) {
+        groupImageFileInputRef.current.value = "";
+      }
+      setGroupImageUploadError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setGroupImageUploading(false);
+    }
+  };
+
   const handleCreateGroup = async () => {
     setCreatingGroup(true);
     try {
@@ -232,7 +269,7 @@ export function CreatorChatsSection({
       setGroupName("");
       setGroupAudience("free");
       setGroupMinTierId("");
-      setGroupImageUrl("");
+      clearGroupChatImage();
       setCreateGroupOpen(false);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to create group");
@@ -325,7 +362,15 @@ export function CreatorChatsSection({
                   </div>
                 </DialogContent>
               </Dialog>
-              <Dialog open={createGroupOpen} onOpenChange={setCreateGroupOpen}>
+              <Dialog
+                open={createGroupOpen}
+                onOpenChange={(open) => {
+                  setCreateGroupOpen(open);
+                  if (!open) {
+                    setGroupImageUploadError(null);
+                  }
+                }}
+              >
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle>Create group chat</DialogTitle>
@@ -342,14 +387,53 @@ export function CreatorChatsSection({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="group-image-url">Profile image (optional)</Label>
-                      <Input
-                        id="group-image-url"
-                        type="url"
-                        placeholder="https://..."
-                        value={groupImageUrl}
-                        onChange={(e) => setGroupImageUrl(e.target.value)}
+                      <Label>Profile image (optional)</Label>
+                      <input
+                        ref={groupImageFileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="sr-only"
+                        aria-hidden
+                        onChange={handleGroupImageFile}
                       />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={groupImageUploading}
+                          onClick={() => groupImageFileInputRef.current?.click()}
+                        >
+                          {groupImageUploading ? (
+                            <Loader2 className="size-4 animate-spin" aria-hidden />
+                          ) : null}
+                          {groupImageUrl ? "Change image" : "Upload image"}
+                        </Button>
+                        {groupImageUrl ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={groupImageUploading}
+                            onClick={clearGroupChatImage}
+                          >
+                            Remove
+                          </Button>
+                        ) : null}
+                      </div>
+                      {groupImageUrl ? (
+                        <Avatar className="size-14">
+                          <AvatarImage src={groupImageUrl} alt="" />
+                          <AvatarFallback>IMG</AvatarFallback>
+                        </Avatar>
+                      ) : null}
+                      {groupImageUploadError ? (
+                        <p className="text-xs text-destructive">{groupImageUploadError}</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          JPEG, PNG, WebP, or GIF. Uploaded to IPFS via Pinata.
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-3">
                       <Label>Audience</Label>
@@ -409,6 +493,7 @@ export function CreatorChatsSection({
                       onClick={handleCreateGroup}
                       disabled={
                         creatingGroup ||
+                        groupImageUploading ||
                         !groupName.trim() ||
                         (groupAudience === "paid" && tiers.length > 0 && !groupMinTierId)
                       }

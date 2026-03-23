@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TiptapPostEditor } from "@/components/creator/tiptap-post-editor";
+import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
 import type { Post } from "@/lib/db/schema";
 import { toast } from "sonner";
 import { updatePost } from "@/app/actions/post";
@@ -45,6 +46,23 @@ export function PostFormFields({ control }: PostFormFieldsProps) {
                 className="text-lg font-medium"
                 {...field}
                 aria-invalid={fieldState.invalid}
+              />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+        <Controller
+          control={control}
+          name="coverImageUrl"
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <PinataImageUploadField
+                id="post-form-coverImageUrl"
+                label="Cover image (optional)"
+                description="Shown on post cards and your public profile when this post is featured."
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                preview="banner"
               />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>

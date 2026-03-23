@@ -112,6 +112,7 @@ export function TiersSection({
                             name: tier.name,
                             description: tier.description || "",
                             amount: tier.amount,
+                            coverImageUrl: tier.coverImageUrl,
                           }}
                           onSuccess={() => {
                             setEditingTierId(null);
