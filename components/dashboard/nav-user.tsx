@@ -64,7 +64,7 @@ export function NavUser({
                   {truncateAddress(user.ckbAddress)}
                 </span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {user.isCreator ? "Creator account" : "Member account"}
+                  {onCreatorDashboard ? "Creator" : "Member"}
                 </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
@@ -87,7 +87,7 @@ export function NavUser({
                     {truncateAddress(user.ckbAddress, 4, 4)}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {user.isCreator ? "Creator account" : "Member account"}
+                    {onCreatorDashboard ? "Creator" : "Member"}
                   </span>
                 </div>
               </div>
