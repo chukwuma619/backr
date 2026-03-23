@@ -1,12 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { ChevronsUpDown,
-LogOut } from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { Check, ChevronsUpDown, Home, LayoutDashboard, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -18,7 +19,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { truncateAddress } from "@/lib/utils";
+import { cn, truncateAddress } from "@/lib/utils";
 import multiavatar from "@multiavatar/multiavatar";
 
 export function NavUser({
@@ -30,8 +31,12 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
+  const pathname = usePathname();
   const router = useRouter();
   const { refetch } = useAuth();
+
+  const onMemberDashboard = pathname.startsWith("/dashboard");
+  const onCreatorDashboard = pathname.startsWith("/creator");
 
   const handleSignOut = async () => {
     await fetch("/api/auth/session", { method: "DELETE" });
@@ -87,16 +92,43 @@ export function NavUser({
                 </div>
               </div>
             </DropdownMenuLabel>
-            {/* <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard/settings">
-                  <User className="size-4" />
-                  Account
-                </Link>
-              </DropdownMenuItem>
-             
-            </DropdownMenuGroup> */}
+            {user.isCreator ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/dashboard"
+                      className={cn(
+                        "flex cursor-pointer items-center gap-2",
+                        onMemberDashboard && "bg-accent",
+                      )}
+                    >
+                      <Home className="size-4" />
+                      Member dashboard
+                      {onMemberDashboard ? (
+                        <Check className="ml-auto size-4" />
+                      ) : null}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/creator"
+                      className={cn(
+                        "flex cursor-pointer items-center gap-2",
+                        onCreatorDashboard && "bg-accent",
+                      )}
+                    >
+                      <LayoutDashboard className="size-4" />
+                      Creator dashboard
+                      {onCreatorDashboard ? (
+                        <Check className="ml-auto size-4" />
+                      ) : null}
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleSignOut}
