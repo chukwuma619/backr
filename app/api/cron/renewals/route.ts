@@ -115,25 +115,29 @@ export async function GET(request: NextRequest) {
           }
         );
 
-        const platformPaymentResult = await sendPayment(patronNodeUrl, {
-          invoice: platformInvoiceResult.invoice_address,
-        });
-
-        platformFeeFiberTxRef =
-          typeof platformPaymentResult.payment_hash === "string"
-            ? platformPaymentResult.payment_hash
-            : JSON.stringify(platformPaymentResult.payment_hash);
-
-        if (
-          platformPaymentResult.status !== "Succeeded" &&
-          platformPaymentResult.status !== "succeeded"
-        ) {
-          results.push({
-            id: patronage.id,
-            status: "failed",
-            reason: `Platform fee payment: ${platformPaymentResult.status}`,
+        try {
+          const platformPaymentResult = await sendPayment(patronNodeUrl, {
+            invoice: platformInvoiceResult.invoice_address,
           });
-          continue;
+
+          if (
+            platformPaymentResult.status === "Succeeded" ||
+            platformPaymentResult.status === "succeeded"
+          ) {
+            platformFeeFiberTxRef =
+              typeof platformPaymentResult.payment_hash === "string"
+                ? platformPaymentResult.payment_hash
+                : JSON.stringify(platformPaymentResult.payment_hash);
+          } else {
+            console.warn(
+              `Renewal ${patronage.id}: platform fee status ${platformPaymentResult.status}; extending membership without fee ref`
+            );
+          }
+        } catch (platformErr) {
+          console.warn(
+            `Renewal ${patronage.id}: platform fee send failed; extending membership without fee ref`,
+            platformErr
+          );
         }
       }
 

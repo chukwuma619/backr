@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,10 +22,12 @@ type SupportButtonProps = {
 };
 
 export function SupportButton({ tier, creator }: SupportButtonProps) {
+  const router = useRouter();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<"idle" | "pending" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [paymentNote, setPaymentNote] = useState<string | null>(null);
 
   const isOwnHub = user && creator.userId === user.id;
   const canSupport = !isOwnHub;
@@ -37,35 +40,15 @@ export function SupportButton({ tier, creator }: SupportButtonProps) {
 
     setStatus("pending");
     setError(null);
+    setPaymentNote(null);
 
     try {
-      const invoiceRes = await fetch("/api/fiber/invoice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          creatorId: creator.id,
-          tierId: tier.id,
-        }),
-      });
-
-      if (!invoiceRes.ok) {
-        const data = await invoiceRes.json().catch(() => ({}));
-        throw new Error(data.error ?? "Failed to create invoice");
-      }
-
-      const invoiceData = await invoiceRes.json();
-      const creatorInvoiceAddress =
-        invoiceData.creatorInvoiceAddress ?? invoiceData.invoiceAddress;
-      const platformInvoiceAddress = invoiceData.platformInvoiceAddress ?? null;
-
       const payRes = await fetch("/api/fiber/pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           creatorId: creator.id,
           tierId: tier.id,
-          creatorInvoiceAddress,
-          platformInvoiceAddress,
         }),
       });
 
@@ -74,7 +57,13 @@ export function SupportButton({ tier, creator }: SupportButtonProps) {
         throw new Error(data.error ?? "Failed to complete payment");
       }
 
+      const payData = await payRes.json().catch(() => ({}));
+      if (typeof payData.warning === "string") {
+        setPaymentNote(payData.warning);
+      }
+
       setStatus("success");
+      router.refresh();
     } catch (err) {
       setStatus("error");
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -92,13 +81,18 @@ export function SupportButton({ tier, creator }: SupportButtonProps) {
         <DialogHeader>
           <DialogTitle>Support {creator.displayName}</DialogTitle>
           <DialogDescription>
-            {tier.name} — ${tier.amount}
+            {tier.name} — {tier.amount} CKB / month
           </DialogDescription>
         </DialogHeader>
         {status === "success" ? (
-          <p className="text-sm text-green-600 dark:text-green-400">
-            Thank you for your support!
-          </p>
+          <div className="space-y-2">
+            <p className="text-sm text-green-600 dark:text-green-400">
+              Thank you for your support!
+            </p>
+            {paymentNote ? (
+              <p className="text-muted-foreground text-sm">{paymentNote}</p>
+            ) : null}
+          </div>
         ) : (
           <>
             {error && <p className="text-sm text-destructive">{error}</p>}

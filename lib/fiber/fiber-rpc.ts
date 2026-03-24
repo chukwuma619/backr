@@ -1,6 +1,9 @@
 /**
- * Fiber node JSON-RPC client.
- * Call invoice.new_invoice and payment.send_payment on a Fiber node.
+ * Fiber node JSON-RPC client (HTTP to Fiber Network Node JSON-RPC).
+ * See https://docs.fiber.world/ and Fiber RPC docs for `new_invoice` / `send_payment`.
+ *
+ * For in-browser WASM nodes, use `@nervosnetwork/fiber-js` (same RPC surface); this app
+ * uses server-side calls to trusted nodes for membership checkout and cron renewals.
  */
 
 const CKB_SHANNONS = 100_000_000; // 1 CKB = 10^8 shannons

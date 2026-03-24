@@ -75,7 +75,7 @@ export default async function CreatorMembershipPage({ params }: Props) {
                   <div className="min-w-0 space-y-1">
                     <CardTitle className="text-lg">{tier.name}</CardTitle>
                     <p className="text-foreground text-sm font-medium">
-                      ${tier.amount}
+                      {tier.amount} CKB / month
                     </p>
                     {tier.description ? (
                       <CardDescription className="text-pretty">
