@@ -7,10 +7,11 @@ import {
   getPatronagesByUserId,
   getPublicCreatorBySlug,
   getPublicCreatorCollectionById,
-  getPublicPostAccessFlags,
+  getPublicPostAccessFlagsByCreator,
   getPublishedPostsByCollectionId,
 } from "@/lib/db/queries";
 import { PublicPostsSection } from "@/components/creator/public-posts-section";
+import { attachResolvedPostBodies } from "@/lib/posts/resolve-post-body";
 
 type Props = {
   params: Promise<{ username: string; id: string }>;
@@ -68,9 +69,17 @@ export default async function CreatorCollectionDetailPage({ params }: Props) {
   const { data: posts = [] } = await getPublishedPostsByCollectionId(
     collectionId
   );
-  const accessMap = await getPublicPostAccessFlags(
-    posts.map((p) => ({ id: p.id, audience: p.audience ?? null })),
-    patronTierId
+  const accessMap = await getPublicPostAccessFlagsByCreator(
+    posts.map((p) => ({
+      id: p.id,
+      audience: p.audience ?? null,
+      creatorId: p.creatorId,
+    })),
+    patronTierId ? new Map([[creator.id, patronTierId]]) : new Map()
+  );
+  const postsWithBodies = await attachResolvedPostBodies(
+    posts,
+    (p) => p.audience !== "paid" || (accessMap.get(p.id) ?? false)
   );
 
   return (
@@ -117,7 +126,7 @@ export default async function CreatorCollectionDetailPage({ params }: Props) {
 
         <PublicPostsSection
           username={username}
-          posts={posts}
+          posts={postsWithBodies}
           accessMap={accessMap}
           title="Posts in this collection"
           description="Published posts in this group, newest first"

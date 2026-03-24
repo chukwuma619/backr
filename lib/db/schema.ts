@@ -131,7 +131,15 @@ export const posts = pgTable("posts", {
     .notNull()
     .references(() => creators.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
+  /** Legacy inline HTML; superseded by contentCid when set. */
   content: text("content"),
+  /** IPFS CID for JSON payload `{ version, format, html }` (TipTap HTML body). */
+  contentCid: text("content_cid"),
+  /**
+   * AES-256 post content key, sealed with POST_CONTENT_MASTER_KEY.
+   * Set for paid posts with encrypted IPFS payload (v2); never expose to the client.
+   */
+  postKeyEncrypted: text("post_key_encrypted"),
   coverImageUrl: text("cover_image_url"),
   status: text("status")
     .notNull()

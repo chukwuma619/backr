@@ -85,6 +85,27 @@
       "when": 1775000000000,
       "tag": "0011_remove_nostr_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1775000001000,
+      "tag": "0012_post_content_cid",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1775000002000,
+      "tag": "0013_post_key_encrypted",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1774312151295,
+      "tag": "0014_oval_nehzno",
+      "breakpoints": true
     }
   ]
 }

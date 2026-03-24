@@ -9,7 +9,7 @@ import {
   getCreatorSubscriptionForUser,
   getPatronagesByUserId,
   getPublicCreatorBySlug,
-  getPublicPostAccessFlags,
+  getPublicPostAccessFlagsByCreator,
   getPublishedPostsByCreatorId,
 } from "@/lib/db/queries";
 import { PublicCollectionsRow } from "@/components/creator/public-collections-row";
@@ -22,8 +22,10 @@ import { SubscribeButton } from "@/components/creator/subscribe-button";
 import { PublicPostsSection } from "@/components/creator/public-posts-section";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import type { Post } from "@/lib/db/schema";
 import { getPublicPostHeroImage } from "@/lib/posts/post-hero";
+import { htmlToPlainPreview } from "@/lib/posts/html-preview";
+import { attachResolvedPostBodies } from "@/lib/posts/resolve-post-body";
+import type { PostWithResolvedBody } from "@/lib/posts/resolve-post-body";
 
 type Props = {
   params: Promise<{ username: string }>;
@@ -43,7 +45,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 function toSlides(
-  posts: Post[],
+  posts: PostWithResolvedBody[],
   accessMap: Map<number, boolean>
 ): PublicPostSlide[] {
   return posts.map((post) => {
@@ -53,10 +55,10 @@ function toSlides(
       id: post.id,
       title: post.title,
       dateLabel: format(new Date(date), "MMM d, yyyy"),
-      heroImageUrl: getPublicPostHeroImage(post),
+      heroImageUrl: getPublicPostHeroImage(post, post.resolvedBody),
       canView: accessMap.get(post.id) ?? false,
       isPaid,
-      previewText: (post.content ?? "").slice(0, 400),
+      previewText: htmlToPlainPreview(post.resolvedBody, 400),
     };
   });
 }
@@ -93,14 +95,23 @@ export default async function CreatorProfilePage({ params }: Props) {
     getCreatorCollectionsByCreatorId(creator.id),
   ]);
 
-  const accessMap = await getPublicPostAccessFlags(
-    allPosts.map((p) => ({ id: p.id, audience: p.audience ?? null })),
-    patronTierId
+  const accessMap = await getPublicPostAccessFlagsByCreator(
+    allPosts.map((p) => ({
+      id: p.id,
+      audience: p.audience ?? null,
+      creatorId: p.creatorId,
+    })),
+    patronTierId ? new Map([[creator.id, patronTierId]]) : new Map()
   );
 
-  const latestPost = allPosts[0];
-  const recentCarouselPosts = allPosts.slice(1, 7);
-  const moreCarouselPosts = allPosts.slice(7, 13);
+  const allPostsWithBodies = await attachResolvedPostBodies(
+    allPosts,
+    (p) => p.audience !== "paid" || (accessMap.get(p.id) ?? false)
+  );
+
+  const latestPost = allPostsWithBodies[0];
+  const recentCarouselPosts = allPostsWithBodies.slice(1, 7);
+  const moreCarouselPosts = allPostsWithBodies.slice(7, 13);
 
   const recentSlides = toSlides(recentCarouselPosts, accessMap);
   const moreSlides = toSlides(moreCarouselPosts, accessMap);
@@ -226,12 +237,15 @@ export default async function CreatorProfilePage({ params }: Props) {
                   ),
                   "MMM d, yyyy"
                 )}
-                heroImageUrl={getPublicPostHeroImage(latestPost)}
+                heroImageUrl={getPublicPostHeroImage(
+                  latestPost,
+                  latestPost.resolvedBody
+                )}
                 canView={accessMap.get(latestPost.id) ?? false}
                 isPaid={latestPost.audience === "paid"}
                 previewText={
                   accessMap.get(latestPost.id)
-                    ? (latestPost.content ?? "").slice(0, 800)
+                    ? htmlToPlainPreview(latestPost.resolvedBody, 800)
                     : undefined
                 }
                 variant="featured"
@@ -270,7 +284,7 @@ export default async function CreatorProfilePage({ params }: Props) {
           {allPosts.length > 13 ? (
             <PublicPostsSection
               username={username}
-              posts={allPosts.slice(13)}
+              posts={allPostsWithBodies.slice(13)}
               accessMap={accessMap}
               title="Earlier posts"
               description="Older updates"

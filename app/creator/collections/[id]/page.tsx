@@ -13,6 +13,7 @@ import {
   getPostsByCreatorId,
   getPostsInCollectionForCreator,
 } from "@/lib/db/queries";
+import { attachResolvedPostBodies } from "@/lib/posts/resolve-post-body";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -43,6 +44,11 @@ export default async function CreatorCollectionDetailPage({ params }: Props) {
       getPostsInCollectionForCreator(collectionId, creator.id),
       getPostsByCreatorId(creator.id),
     ]);
+
+  const collectionPostsWithBodies = await attachResolvedPostBodies(
+    collectionPosts,
+    () => true
+  );
 
   const inCollectionPostIds = collectionPosts.map((p) => p.id);
 
@@ -113,7 +119,7 @@ export default async function CreatorCollectionDetailPage({ params }: Props) {
             card.
           </p>
         </div>
-        {collectionPosts.length === 0 ? (
+        {collectionPostsWithBodies.length === 0 ? (
           <p className="text-muted-foreground rounded-xl border border-dashed p-8 text-center text-sm">
             No posts in this collection yet. Use{" "}
             <span className="text-foreground font-medium">Add posts</span> to
@@ -121,10 +127,11 @@ export default async function CreatorCollectionDetailPage({ params }: Props) {
           </p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {collectionPosts.map((post) => (
+            {collectionPostsWithBodies.map((post) => (
               <CollectionPostCard
                 key={post.id}
                 post={post}
+                resolvedBodyHtml={post.resolvedBody}
                 collectionId={collectionId}
               />
             ))}

@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { format } from "date-fns";
-import type { Post } from "@/lib/db/schema";
 import { PublicPostCard } from "@/components/creator/public-post-card";
 import { getPublicPostHeroImage } from "@/lib/posts/post-hero";
+import { htmlToPlainPreview } from "@/lib/posts/html-preview";
+import type { PostWithResolvedBody } from "@/lib/posts/resolve-post-body";
 
 type Props = {
   username: string;
-  posts: Post[];
+  posts: PostWithResolvedBody[];
   accessMap: Map<number, boolean>;
   title: string;
   description?: string;
@@ -57,11 +58,13 @@ export function PublicPostsSection({
                 username={username}
                 title={post.title}
                 dateLabel={format(new Date(date), "MMM d, yyyy")}
-                heroImageUrl={getPublicPostHeroImage(post)}
+                heroImageUrl={getPublicPostHeroImage(post, post.resolvedBody)}
                 canView={canView}
                 isPaid={isPaid}
                 previewText={
-                  canView ? (post.content ?? "").slice(0, 500) : undefined
+                  canView
+                    ? htmlToPlainPreview(post.resolvedBody, 500)
+                    : undefined
                 }
                 variant="default"
               />

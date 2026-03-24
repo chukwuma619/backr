@@ -7,7 +7,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getGatedFeedForPatron } from "@/lib/db/queries";
+import {
+  getGatedFeedForPatron,
+  getPatronTierIdsByCreatorForUser,
+  getPublicPostAccessFlagsByCreator,
+} from "@/lib/db/queries";
+import { htmlToPlainPreview } from "@/lib/posts/html-preview";
+import { resolvePostBodyHtml } from "@/lib/posts/resolve-post-body";
 
 export async function HomeFeedSection({ userId }: { userId: string }) {
   const { data: feedItems, error } = await getGatedFeedForPatron(userId);
@@ -43,6 +49,25 @@ export async function HomeFeedSection({ userId }: { userId: string }) {
     );
   }
 
+  const tierMap = await getPatronTierIdsByCreatorForUser(userId);
+  const accessMap = await getPublicPostAccessFlagsByCreator(
+    feedItems.map(({ post }) => ({
+      id: post.id,
+      audience: post.audience ?? null,
+      creatorId: post.creatorId,
+    })),
+    tierMap
+  );
+
+  const feedBodies = await Promise.all(
+    feedItems.map(({ post }) =>
+      resolvePostBodyHtml(
+        post,
+        (p) => p.audience !== "paid" || (accessMap.get(p.id) ?? false)
+      )
+    )
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -54,7 +79,7 @@ export async function HomeFeedSection({ userId }: { userId: string }) {
         </p>
       </div>
       <div className="space-y-4">
-        {feedItems.map(({ post, creatorDisplayName, creatorUsername, minTierName }) => (
+        {feedItems.map(({ post, creatorDisplayName, creatorUsername, minTierName }, i) => (
           <Link key={post.id} href={`/c/${creatorUsername}`}>
             <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
               <CardHeader className="pb-2">
@@ -70,7 +95,7 @@ export async function HomeFeedSection({ userId }: { userId: string }) {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground line-clamp-2">
-                  {post.content}
+                  {htmlToPlainPreview(feedBodies[i] ?? "", 400)}
                 </p>
               </CardContent>
             </Card>

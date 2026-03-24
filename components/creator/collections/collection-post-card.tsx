@@ -7,7 +7,9 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { XIcon } from "lucide-react";
 import { removePostFromCreatorCollection } from "@/app/actions/collections";
-import type { Post } from "@/lib/db/schema";
+import type { Post as PostRow } from "@/lib/db/schema";
+
+type Post = Omit<PostRow, "postKeyEncrypted">;
 import { getPublicPostHeroImage } from "@/lib/posts/post-hero";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,13 +17,15 @@ import { cn } from "@/lib/utils";
 
 export function CollectionPostCard({
   post,
+  resolvedBodyHtml,
   collectionId,
 }: {
   post: Post;
+  resolvedBodyHtml: string;
   collectionId: number;
 }) {
   const router = useRouter();
-  const hero = getPublicPostHeroImage(post);
+  const hero = getPublicPostHeroImage(post, resolvedBodyHtml);
   const date = post.publishedAt ?? post.createdAt;
 
   async function onRemove(e: React.MouseEvent) {

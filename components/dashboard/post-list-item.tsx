@@ -4,9 +4,10 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { EditPostDialog } from "./edit-post-dialog";
-import type { Post } from "@/lib/db/schema";
+import type { PostWithResolvedBody } from "@/lib/posts/resolve-post-body";
+import { htmlToPlainPreview } from "@/lib/posts/html-preview";
 
-export function PostListItem({ post }: { post: Post }) {
+export function PostListItem({ post }: { post: PostWithResolvedBody }) {
   const [editOpen, setEditOpen] = useState(false);
 
   return (
@@ -24,13 +25,14 @@ export function PostListItem({ post }: { post: Post }) {
         </Button>
       </div>
       <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-        {post.content}
+        {htmlToPlainPreview(post.resolvedBody, 320)}
       </p>
       <p className="text-xs text-muted-foreground mt-2">
         {format(new Date(post.publishedAt ?? post.createdAt), "MMM d, yyyy")}
       </p>
       <EditPostDialog
         post={post}
+        resolvedBodyHtml={post.resolvedBody}
         open={editOpen}
         onOpenChange={setEditOpen}
       />

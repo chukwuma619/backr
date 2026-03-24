@@ -139,6 +139,75 @@ export async function getPublicPostAccessFlags(
   return map;
 }
 
+/** Active patron tier id per creator (for multi-creator views like the home feed). */
+export async function getPatronTierIdsByCreatorForUser(
+  patronUserId: string
+): Promise<Map<string, string>> {
+  const rows = await db
+    .select({
+      creatorId: patronage.creatorId,
+      tierId: patronage.tierId,
+    })
+    .from(patronage)
+    .where(
+      and(
+        eq(patronage.patronUserId, patronUserId),
+        eq(patronage.status, "active")
+      )
+    );
+  return new Map(rows.map((r) => [r.creatorId, r.tierId]));
+}
+
+/**
+ * Same tier rules as `getPublicPostAccessFlags`, but each post can belong to a
+ * different creator (patron tier is resolved per `creatorId`).
+ */
+export async function getPublicPostAccessFlagsByCreator(
+  postRows: { id: number; audience: string | null; creatorId: string }[],
+  patronTierIdByCreatorId: Map<string, string | null>
+): Promise<Map<number, boolean>> {
+  const map = new Map<number, boolean>();
+  const paidIds: { id: number; creatorId: string }[] = [];
+  for (const p of postRows) {
+    if (p.audience === "paid") {
+      paidIds.push({ id: p.id, creatorId: p.creatorId });
+    } else {
+      map.set(p.id, true);
+    }
+  }
+  if (paidIds.length === 0) {
+    return map;
+  }
+
+  const postIds = [...new Set(paidIds.map((p) => p.id))];
+  const rows = await db
+    .select({
+      postId: postPaidAudienceTiers.postId,
+      tierId: postPaidAudienceTiers.tierId,
+    })
+    .from(postPaidAudienceTiers)
+    .where(inArray(postPaidAudienceTiers.postId, postIds));
+
+  const byPost = new Map<number, Set<string>>();
+  for (const r of rows) {
+    if (!byPost.has(r.postId)) byPost.set(r.postId, new Set());
+    byPost.get(r.postId)!.add(r.tierId);
+  }
+
+  for (const { id, creatorId } of paidIds) {
+    const tierSet = byPost.get(id);
+    const patronTierId = patronTierIdByCreatorId.get(creatorId) ?? null;
+    const ok = Boolean(
+      tierSet &&
+        tierSet.size > 0 &&
+        patronTierId &&
+        tierSet.has(patronTierId)
+    );
+    map.set(id, ok);
+  }
+  return map;
+}
+
 export async function getCreatorBySlug(slug: string) {
   try {
     const [row] = await db

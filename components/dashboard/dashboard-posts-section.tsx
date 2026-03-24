@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getPostsByCreatorId } from "@/lib/db/queries";
+import { attachResolvedPostBodies } from "@/lib/posts/resolve-post-body";
 import { PostListItem } from "./post-list-item";
 import type { Creator } from "@/lib/db/schema";
 
@@ -25,6 +26,11 @@ export async function DashboardPostsSection({ creator }: { creator: Creator }) {
     );
   }
 
+  const postsWithBodies =
+    posts && posts.length > 0
+      ? await attachResolvedPostBodies(posts, () => true)
+      : [];
+
   return (
     <div className="space-y-8">
       <div className="flex justify-end">
@@ -41,9 +47,9 @@ export async function DashboardPostsSection({ creator }: { creator: Creator }) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {posts && posts.length > 0 ? (
+          {postsWithBodies.length > 0 ? (
             <ul className="space-y-4">
-              {posts.map((post) => (
+              {postsWithBodies.map((post) => (
                 <PostListItem key={post.id} post={post} />
               ))}
             </ul>

@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { setPostCollections } from "@/lib/db/queries";
 import { creators, posts, postPaidAudienceTiers, tiers } from "@/lib/db/schema";
+import { uploadPostBodyToIpfs } from "@/lib/posts/post-body-ipfs";
 
 
 export async function createPost(
@@ -65,11 +66,29 @@ export async function updatePost(
   }
 
   try {
+    const [postRow] = await db
+      .select({ audience: posts.audience })
+      .from(posts)
+      .where(eq(posts.id, postId))
+      .limit(1);
+    if (!postRow) {
+      return { data: null, error: new Error("Post not found") };
+    }
+
+    const encrypt = postRow.audience === "paid";
+    const { cid, postKeyEncrypted } = await uploadPostBodyToIpfs(
+      parsed.data.body,
+      postId,
+      { encrypt }
+    );
+
   const [updated] = await db
     .update(posts)
     .set({
       title: parsed.data.title,
-      content: parsed.data.body,
+      content: null,
+      contentCid: cid,
+      postKeyEncrypted: encrypt ? postKeyEncrypted : null,
       ...(hasCoverKey
         ? { coverImageUrl: parsed.data.coverImageUrl?.trim() || null }
         : {}),
@@ -233,11 +252,18 @@ export async function updatePostWithSettings(
       return { data: null, error: { message: "Post not found" } };
     }
 
+    const encrypt = audience === "paid";
+    const { cid, postKeyEncrypted } = await uploadPostBodyToIpfs(body, postId, {
+      encrypt,
+    });
+
     await db
       .update(posts)
       .set({
         title,
-        content: body,
+        content: null,
+        contentCid: cid,
+        postKeyEncrypted: encrypt ? postKeyEncrypted : null,
         coverImageUrl: coverImageUrl?.trim() || null,
         audience: audience as "free" | "paid",
         updatedAt: new Date(),

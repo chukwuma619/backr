@@ -15,7 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TiptapPostEditor } from "@/components/creator/tiptap-post-editor";
 import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
-import type { Post } from "@/lib/db/schema";
+import type { Post as PostRow } from "@/lib/db/schema";
+
+type Post = Omit<PostRow, "postKeyEncrypted">;
 import { toast } from "sonner";
 import { updatePost } from "@/app/actions/post";
 

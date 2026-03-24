@@ -7,6 +7,10 @@ import {
   getPostPaidAudienceTierIds,
   getTiersByCreatorId,
 } from "@/lib/db/queries";
+import {
+  resolvePostBodyHtml,
+  stripPostKeyForClient,
+} from "@/lib/posts/resolve-post-body";
 import { PostEditor } from "@/components/creator/post-editor";
 import { PostStatusButton } from "@/components/creator/post-status-button";
 import { Button } from "@/components/ui/button";
@@ -31,6 +35,8 @@ export default async function CreatorPostDetailPage({ params }: Props) {
     return notFound();
   }
 
+  const resolvedBodyHtml = await resolvePostBodyHtml(post, () => true);
+
   const [
     { data: paidTierIds = [] },
     { data: tiers = [] },
@@ -45,7 +51,8 @@ export default async function CreatorPostDetailPage({ params }: Props) {
 
   return (
     <PostEditor
-      post={post}
+      post={stripPostKeyForClient(post)}
+      resolvedBodyHtml={resolvedBodyHtml}
       tiers={tiers ?? []}
       paidAudienceTierIds={paidTierIds ?? []}
       collections={collections.map((c) => ({ id: c.id, name: c.name }))}

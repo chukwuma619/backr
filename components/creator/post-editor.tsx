@@ -9,7 +9,10 @@ import { updatePostWithSettings } from "@/app/actions/post";
 import { PostFormFields } from "@/components/creator/post-form";
 import { PostSettingsFields } from "@/components/creator/post-settings";
 import type { PostEditorFormValues } from "@/lib/creator/post-editor-types";
-import type { Post } from "@/lib/db/schema";
+import type { Post as PostRow } from "@/lib/db/schema";
+
+/** Never includes sealed `postKeyEncrypted` (server-only). */
+type Post = Omit<PostRow, "postKeyEncrypted">;
 
 const DEBOUNCE_MS = 600;
 
@@ -38,6 +41,8 @@ function defaultMinTierId(
 
 type PostEditorProps = {
   post: Post;
+  /** Resolved TipTap HTML when body is stored on IPFS (contentCid). */
+  resolvedBodyHtml: string;
   tiers: { id: string; name: string; amount: string }[];
   paidAudienceTierIds: string[];
   collections: { id: number; name: string }[];
@@ -47,6 +52,7 @@ type PostEditorProps = {
 
 export function PostEditor({
   post,
+  resolvedBodyHtml,
   tiers,
   paidAudienceTierIds,
   collections,
@@ -60,7 +66,7 @@ export function PostEditor({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: post.title ?? "",
-      body: post.content ?? "",
+      body: resolvedBodyHtml,
       coverImageUrl: post.coverImageUrl ?? "",
       audience: (post.audience ?? "free") as "free" | "paid",
       minTierId: defaultMinTierId(post.audience ?? null, paidAudienceTierIds, tiers),

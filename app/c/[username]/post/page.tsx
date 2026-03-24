@@ -4,10 +4,11 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import {
   getPatronagesByUserId,
   getPublicCreatorBySlug,
-  getPublicPostAccessFlags,
+  getPublicPostAccessFlagsByCreator,
   getPublishedPostsByCreatorId,
 } from "@/lib/db/queries";
 import { PublicPostsSection } from "@/components/creator/public-posts-section";
+import { attachResolvedPostBodies } from "@/lib/posts/resolve-post-body";
 
 type Props = {
   params: Promise<{ username: string }>;
@@ -41,16 +42,24 @@ export default async function CreatorPostsPage({ params }: Props) {
   }
 
   const { data: posts = [] } = await getPublishedPostsByCreatorId(creator.id);
-  const accessMap = await getPublicPostAccessFlags(
-    posts.map((p) => ({ id: p.id, audience: p.audience ?? null })),
-    patronTierId
+  const accessMap = await getPublicPostAccessFlagsByCreator(
+    posts.map((p) => ({
+      id: p.id,
+      audience: p.audience ?? null,
+      creatorId: p.creatorId,
+    })),
+    patronTierId ? new Map([[creator.id, patronTierId]]) : new Map()
+  );
+  const postsWithBodies = await attachResolvedPostBodies(
+    posts,
+    (p) => p.audience !== "paid" || (accessMap.get(p.id) ?? false)
   );
 
   return (
     <div className="w-full px-4 pb-16 pt-6">
       <PublicPostsSection
         username={username}
-        posts={posts}
+        posts={postsWithBodies}
         accessMap={accessMap}
         title="All posts"
         description="Published posts, newest first"

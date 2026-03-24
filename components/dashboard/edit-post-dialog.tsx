@@ -22,7 +22,9 @@ import { Button } from "@/components/ui/button";
 import { TiptapPostEditor } from "@/components/creator/tiptap-post-editor";
 import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
 import { updatePost } from "@/app/actions/post";
-import type { Post } from "@/lib/db/schema";
+import type { Post as PostRow } from "@/lib/db/schema";
+
+type Post = Omit<PostRow, "postKeyEncrypted">;
 
 const schema = z.object({
   title: z.string().min(1, "Title is required").max(200),
@@ -34,12 +36,14 @@ type FormValues = z.infer<typeof schema>;
 
 type EditPostDialogProps = {
   post: Post;
+  resolvedBodyHtml: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
 export function EditPostDialog({
   post,
+  resolvedBodyHtml,
   open,
   onOpenChange,
 }: EditPostDialogProps) {
@@ -50,7 +54,7 @@ export function EditPostDialog({
     resolver: zodResolver(schema),
     defaultValues: {
       title: post.title,
-      body: post.content ?? "",
+      body: resolvedBodyHtml,
       coverImageUrl: post.coverImageUrl ?? "",
     },
   });
@@ -58,10 +62,10 @@ export function EditPostDialog({
   useEffect(() => {
     form.reset({
       title: post.title,
-      body: post.content ?? "",
+      body: resolvedBodyHtml,
       coverImageUrl: post.coverImageUrl ?? "",
     });
-  }, [post.id, post.title, post.content, post.coverImageUrl, form]);
+  }, [post.id, post.title, post.contentCid, post.coverImageUrl, resolvedBodyHtml, form]);
 
   async function onSave(values: FormValues) {
     setError(null);
