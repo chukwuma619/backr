@@ -3,7 +3,13 @@ import {
   getDuePatronagesForRenewal,
   updatePatronageAfterRenewal,
 } from "@/lib/db/queries";
-import { newInvoice, sendPayment } from "@/lib/fiber/fiber-rpc";
+import {
+  fiberPaymentSucceeded,
+  getFiberSendPaymentExtrasFromEnv,
+  mergeSendPaymentParams,
+  newInvoice,
+  sendPaymentAndWait,
+} from "@/lib/fiber/fiber-rpc";
 import {
   calculatePlatformFee,
   calculateCreatorAmount,
@@ -11,7 +17,7 @@ import {
 } from "@/lib/platform-fee";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -39,6 +45,8 @@ export async function GET(request: NextRequest) {
   const hasPlatformFee =
     getPlatformFeePercent() > 0 &&
     process.env.PLATFORM_FIBER_RPC_URL?.trim();
+
+  const envSendExtras = getFiberSendPaymentExtrasFromEnv();
 
   for (const row of duePatronages ?? []) {
     const { patronage, creatorFiberNodeRpcUrl, patronFiberNodeRpcUrl, tierAmount } = row;
@@ -71,24 +79,26 @@ export async function GET(request: NextRequest) {
 
       const creatorInvoiceResult = await newInvoice(creatorFiberNodeRpcUrl, {
         amountCkb: creatorAmount,
-        currency: "CKB",
         description: `Renewal - ${row.creatorDisplayName} - ${row.tierName}`,
         expiry: 3600,
       });
 
-      const creatorPaymentResult = await sendPayment(patronNodeUrl, {
-        invoice: creatorInvoiceResult.invoice_address,
-      });
+      const creatorPayParams = mergeSendPaymentParams(
+        creatorInvoiceResult.invoice_address,
+        envSendExtras,
+        undefined
+      );
+      const creatorPaymentResult = await sendPaymentAndWait(
+        patronNodeUrl,
+        creatorPayParams
+      );
 
       const fiberTxRef =
         typeof creatorPaymentResult.payment_hash === "string"
           ? creatorPaymentResult.payment_hash
           : JSON.stringify(creatorPaymentResult.payment_hash);
 
-      if (
-        creatorPaymentResult.status !== "Succeeded" &&
-        creatorPaymentResult.status !== "succeeded"
-      ) {
+      if (!fiberPaymentSucceeded(creatorPaymentResult.status)) {
         results.push({
           id: patronage.id,
           status: "failed",
@@ -103,21 +113,23 @@ export async function GET(request: NextRequest) {
           process.env.PLATFORM_FIBER_RPC_URL!.trim(),
           {
             amountCkb: platformFeeAmount,
-            currency: "CKB",
             description: `Platform fee - ${row.creatorDisplayName}`,
             expiry: 3600,
           }
         );
 
         try {
-          const platformPaymentResult = await sendPayment(patronNodeUrl, {
-            invoice: platformInvoiceResult.invoice_address,
-          });
+          const platformPayParams = mergeSendPaymentParams(
+            platformInvoiceResult.invoice_address,
+            envSendExtras,
+            undefined
+          );
+          const platformPaymentResult = await sendPaymentAndWait(
+            patronNodeUrl,
+            platformPayParams
+          );
 
-          if (
-            platformPaymentResult.status === "Succeeded" ||
-            platformPaymentResult.status === "succeeded"
-          ) {
+          if (fiberPaymentSucceeded(platformPaymentResult.status)) {
             platformFeeFiberTxRef =
               typeof platformPaymentResult.payment_hash === "string"
                 ? platformPaymentResult.payment_hash

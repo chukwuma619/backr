@@ -2,30 +2,46 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { creators, tiers, users } from "@/lib/db/schema";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { newInvoice } from "@/lib/fiber/fiber-rpc";
 import {
   calculatePlatformFee,
   calculateCreatorAmount,
   getPlatformFeePercent,
 } from "@/lib/platform-fee";
+import { fiberPayBodySchema } from "@/lib/fiber/pay-request";
+
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
-  let body: { creatorId?: unknown; tierId?: unknown };
+  if (process.env.FIBER_INVOICE_API_ENABLED !== "true") {
+    return NextResponse.json(
+      {
+        error:
+          "Fiber invoice-only API is disabled. Use POST /api/fiber/pay or set FIBER_INVOICE_API_ENABLED=true.",
+      },
+      { status: 403 }
+    );
+  }
+
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let raw: unknown;
   try {
-    body = await request.json();
+    raw = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const creatorId = typeof body.creatorId === "string" ? body.creatorId.trim() : null;
-  const tierId = typeof body.tierId === "string" ? body.tierId.trim() : null;
-
-  if (!creatorId || !tierId) {
-    return NextResponse.json(
-      { error: "Missing creatorId or tierId" },
-      { status: 400 }
-    );
+  const parsed = fiberPayBodySchema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
+
+  const { creatorId, tierId } = parsed.data;
 
   const [row] = await db
     .select({
@@ -70,7 +86,6 @@ export async function POST(request: NextRequest) {
   try {
     const creatorResult = await newInvoice(creatorFiberNodeRpcUrl, {
       amountCkb: creatorAmount,
-      currency: "CKB",
       description: `${tier.name} - ${creator.displayName}`,
       expiry: 3600,
     });
@@ -85,7 +100,6 @@ export async function POST(request: NextRequest) {
       process.env.PLATFORM_FIBER_RPC_URL!.trim(),
       {
         amountCkb: platformFeeAmount,
-        currency: "CKB",
         description: `Platform fee - ${creator.displayName}`,
         expiry: 3600,
       }

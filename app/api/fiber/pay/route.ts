@@ -4,16 +4,24 @@ import { db } from "@/lib/db";
 import { creators, tiers, users } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createPatronage } from "@/lib/db/queries";
-import { newInvoice, sendPayment } from "@/lib/fiber/fiber-rpc";
+import {
+  fiberPaymentSucceeded,
+  getFiberSendPaymentExtrasFromEnv,
+  mergeSendPaymentParams,
+  newInvoice,
+  sendPaymentAndWait,
+} from "@/lib/fiber/fiber-rpc";
+import {
+  fiberPayBodySchema,
+  fiberPayBodyToSendOptions,
+} from "@/lib/fiber/pay-request";
 import {
   calculatePlatformFee,
   calculateCreatorAmount,
   getPlatformFeePercent,
 } from "@/lib/platform-fee";
 
-function paymentSucceeded(status: string): boolean {
-  return status === "Succeeded" || status === "succeeded";
-}
+export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
@@ -21,22 +29,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { creatorId?: unknown; tierId?: unknown };
+  let raw: unknown;
   try {
-    body = await request.json();
+    raw = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const creatorId = typeof body.creatorId === "string" ? body.creatorId.trim() : null;
-  const tierId = typeof body.tierId === "string" ? body.tierId.trim() : null;
-
-  if (!creatorId || !tierId) {
-    return NextResponse.json(
-      { error: "Missing creatorId or tierId" },
-      { status: 400 }
-    );
+  const parsedBody = fiberPayBodySchema.safeParse(raw);
+  if (!parsedBody.success) {
+    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
+
+  const { creatorId, tierId } = parsedBody.data;
+  const requestSendOptions = fiberPayBodyToSendOptions(parsedBody.data);
+  const envSendExtras = getFiberSendPaymentExtrasFromEnv();
 
   const [userRow] = await db
     .select({ fiberNodeRpcUrl: users.fiberNodeRpcUrl })
@@ -98,7 +105,6 @@ export async function POST(request: NextRequest) {
   try {
     const creatorInvoiceResult = await newInvoice(creatorFiberNodeRpcUrl, {
       amountCkb: creatorAmount,
-      currency: "CKB",
       description: `${tier.name} - ${creator.displayName}`,
       expiry: 3600,
     });
@@ -109,7 +115,6 @@ export async function POST(request: NextRequest) {
         process.env.PLATFORM_FIBER_RPC_URL!.trim(),
         {
           amountCkb: platformFeeAmount,
-          currency: "CKB",
           description: `Platform fee - ${creator.displayName}`,
           expiry: 3600,
         }
@@ -117,15 +122,21 @@ export async function POST(request: NextRequest) {
       platformInvoiceAddress = platformInvoiceResult.invoice_address;
     }
 
-    const creatorPaymentResult = await sendPayment(patronNodeUrl, {
-      invoice: creatorInvoiceResult.invoice_address,
-    });
+    const creatorPayParams = mergeSendPaymentParams(
+      creatorInvoiceResult.invoice_address,
+      envSendExtras,
+      requestSendOptions
+    );
+    const creatorPaymentResult = await sendPaymentAndWait(
+      patronNodeUrl,
+      creatorPayParams
+    );
     const fiberTxRef =
       typeof creatorPaymentResult.payment_hash === "string"
         ? creatorPaymentResult.payment_hash
         : JSON.stringify(creatorPaymentResult.payment_hash);
 
-    if (!paymentSucceeded(creatorPaymentResult.status)) {
+    if (!fiberPaymentSucceeded(creatorPaymentResult.status)) {
       return NextResponse.json(
         {
           error: `Creator payment failed: ${creatorPaymentResult.status}`,
@@ -139,10 +150,16 @@ export async function POST(request: NextRequest) {
 
     if (platformInvoiceAddress) {
       try {
-        const platformPaymentResult = await sendPayment(patronNodeUrl, {
-          invoice: platformInvoiceAddress,
-        });
-        if (paymentSucceeded(platformPaymentResult.status)) {
+        const platformPayParams = mergeSendPaymentParams(
+          platformInvoiceAddress,
+          envSendExtras,
+          requestSendOptions
+        );
+        const platformPaymentResult = await sendPaymentAndWait(
+          patronNodeUrl,
+          platformPayParams
+        );
+        if (fiberPaymentSucceeded(platformPaymentResult.status)) {
           platformFeeFiberTxRef =
             typeof platformPaymentResult.payment_hash === "string"
               ? platformPaymentResult.payment_hash
@@ -158,7 +175,10 @@ export async function POST(request: NextRequest) {
       } catch (platformErr) {
         platformFeeWarning =
           "Membership is active, but the platform fee payment failed. The team may follow up.";
-        console.warn("Fiber platform fee send_payment error after creator paid:", platformErr);
+        console.warn(
+          "Fiber platform fee send_payment error after creator paid:",
+          platformErr
+        );
       }
     }
 

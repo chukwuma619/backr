@@ -14,8 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { Tier } from "@/lib/db/schema";
-import type { Creator } from "@/lib/db/schema";
+import type { Creator, Tier } from "@/lib/db/schema";
 
 type SupportButtonProps = {
   tier: Tier & { perks: unknown[] };

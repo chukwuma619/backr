@@ -45,6 +45,7 @@ const navItems = [
   { href: "#creators", label: "Creators" },
   { href: "#supporters", label: "Supporters" },
   { href: "#checkout-flow", label: "Checkout & renewals" },
+  { href: "#fiber-tuning", label: "Server trust & payment tuning" },
   { href: "#troubleshooting", label: "Troubleshooting" },
   { href: "#reference", label: "Reference" },
 ];
@@ -326,15 +327,44 @@ chmod 600 /var/lib/fnn/ckb/key`}
             triggers the request; it does not sign Fiber calls.
           </p>
           <p className="text-muted-foreground text-sm leading-relaxed">
+            If the node returns <code className="text-xs">Created</code> or{" "}
+            <code className="text-xs">Inflight</code>, the Backr server keeps calling{" "}
+            <code className="text-xs">get_payment</code> until the payment reaches{" "}
+            <code className="text-xs">Success</code> or <code className="text-xs">Failed</code> (or
+            until a configurable timeout — see below).
+          </p>
+          <p className="text-muted-foreground text-sm leading-relaxed">
             <strong className="text-foreground">Renewals:</strong> the app&apos;s cron job repeats a
             similar flow on the schedule your host configures. If your Fiber URL is missing or your
             node cannot pay, that renewal may be skipped until you fix liquidity or settings.
           </p>
         </section>
 
+        <section id="fiber-tuning" className="space-y-4 border-b border-border py-10 scroll-mt-20">
+          <h2 className="text-foreground text-lg font-semibold">
+            8. Server trust, RPC safety, and optional payment tuning
+          </h2>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Treat your JSON-RPC URL like a signing surface: use HTTPS, firewalls, and allowlists where
+            you can (see section 4). Backr only stores the URL you provide and calls it from the server.
+          </p>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Private last hops: set <code className="text-xs">hop_hints</code> via{" "}
+            <code className="text-xs">FIBER_SEND_PAYMENT_HOP_HINTS</code> or{" "}
+            <code className="text-xs">sendPaymentOptions</code> on{" "}
+            <code className="text-xs">POST /api/fiber/pay</code> (
+            <ExternalLink href={FIBER_RPC_README}>Fiber RPC README</ExternalLink>).
+          </p>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Tuning env vars are listed in <code className="text-xs">.env.example</code> (poll interval,
+            max wait, fee caps). <code className="text-xs">FIBER_INVOICE_API_ENABLED</code> gates the
+            invoice-only debug route (off by default; requires sign-in when on).
+          </p>
+        </section>
+
         <section id="troubleshooting" className="space-y-4 border-b border-border py-10 scroll-mt-20">
           <h2 className="text-foreground text-lg font-semibold">
-            8. Troubleshooting
+            9. Troubleshooting
           </h2>
           <ul className="text-muted-foreground list-disc space-y-3 pl-5 text-sm leading-relaxed">
             <li>
@@ -350,7 +380,15 @@ chmod 600 /var/lib/fnn/ckb/key`}
             <li>
               <strong className="text-foreground">Route / payment errors</strong> — wait for channel
               graph sync; confirm channel is <code className="text-xs">ChannelReady</code>; check
-              balances and peer connectivity (Fiber docs).
+              balances and peer connectivity (Fiber docs). For private last hops, configure{" "}
+              <code className="text-xs">hop_hints</code> (env or <code className="text-xs">sendPaymentOptions</code>).
+            </li>
+            <li>
+              <strong className="text-foreground">Checkout times out while Fiber still settling</strong>{" "}
+              — increase <code className="text-xs">FIBER_PAYMENT_MAX_WAIT_MS</code> and/or{" "}
+              <code className="text-xs">FIBER_SEND_PAYMENT_TIMEOUT_SECONDS</code>; ensure your host allows
+              long enough function duration for <code className="text-xs">/api/fiber/pay</code> (Backr sets a
+              high <code className="text-xs">maxDuration</code> for this route).
             </li>
             <li>
               <strong className="text-foreground">Wrong key path</strong> — key file must live under
@@ -362,7 +400,7 @@ chmod 600 /var/lib/fnn/ckb/key`}
         </section>
 
         <section id="reference" className="space-y-4 pt-10 scroll-mt-20">
-          <h2 className="text-foreground text-lg font-semibold">Reference</h2>
+          <h2 className="text-foreground text-lg font-semibold">10. Reference</h2>
           <ul className="text-muted-foreground list-disc space-y-2 pl-5 text-sm leading-relaxed">
             <li>
               <ExternalLink href={DOC_RUN_NODE}>Run a Fiber Node</ExternalLink>
