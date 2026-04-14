@@ -1,14 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { useCcc, useSigner } from "@ckb-ccc/connector-react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { truncateAddress } from "@/lib/utils";
 
+type WalletConnectProps = {
+  variant?: "default" | "marketing";
+};
 
-
-export function WalletConnect() {
+export function WalletConnect({ variant = "default" }: WalletConnectProps) {
   const { open, disconnect, signerInfo } = useCcc();
   const signer = useSigner();
   const { user, refetch } = useAuth();
@@ -77,6 +88,36 @@ export function WalletConnect() {
       syncSessionWithWallet();
     }
   }, [isConnected, address, hasSession, isSigningIn, syncSessionWithWallet]);
+
+  if (variant === "marketing" && hasSession) {
+    const label = user?.ckbAddress
+      ? truncateAddress(user.ckbAddress)
+      : address
+        ? truncateAddress(address)
+        : "Account";
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-1.5">
+            {label}
+            <ChevronDown className="size-4 opacity-70" aria-hidden />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-40">
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard">Dashboard</Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => void handleDisconnect()}
+          >
+            Log out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
 
   if (isConnected) {
     return (
