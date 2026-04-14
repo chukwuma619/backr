@@ -22,7 +22,14 @@ export default function MarketingLayout({
           >
             Home
           </Link>
-          <span aria-hidden> · </span>
+
+          <Link
+            href="/creators"
+            className="text-muted-foreground text-sm underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Creators
+          </Link>
+
           <Link
             href="/fiber-setup"
             className="text-muted-foreground text-sm underline-offset-4 hover:text-foreground hover:underline"
