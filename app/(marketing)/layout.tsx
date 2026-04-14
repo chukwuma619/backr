@@ -24,10 +24,10 @@ export default function MarketingLayout({
           </Link>
 
           <Link
-            href="/creators"
+            href="/discover"
             className="text-muted-foreground text-sm underline-offset-4 hover:text-foreground hover:underline"
           >
-            Creators
+            Discover
           </Link>
 
           <Link
