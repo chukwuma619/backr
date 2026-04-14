@@ -15,9 +15,7 @@ node_modules
 
 # next.js
 /.next/
-/apps/web/.next/
 /out/
-/apps/web/out/
 
 # production
 /build
@@ -35,6 +33,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!docker/fiber-node/.env.example
 
 # vercel
 .vercel
