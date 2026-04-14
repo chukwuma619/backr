@@ -9,9 +9,12 @@ import { cn } from "@/lib/utils";
 export function DiscoverSearch({
   defaultValue,
   className,
+  discoverPath = "/dashboard/discover",
 }: {
   defaultValue?: string;
   className?: string;
+  /** Base path for discover (e.g. `/discover` for marketing, `/dashboard/discover` in-app). */
+  discoverPath?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -26,9 +29,9 @@ export function DiscoverSearch({
       } else {
         params.delete("q");
       }
-      router.push(`/dashboard/discover?${params.toString()}`);
+      router.push(`${discoverPath}?${params.toString()}`);
     },
-    [value, router, searchParams]
+    [value, router, searchParams, discoverPath]
   );
 
   const placeholder = searchParams.get("topic")

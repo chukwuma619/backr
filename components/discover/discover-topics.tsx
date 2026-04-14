@@ -5,14 +5,18 @@ import { useSearchParams } from "next/navigation";
 import { DISCOVER_TOPICS } from "@/lib/discover/constants";
 import { cn } from "@/lib/utils";
 
-export function DiscoverTopics() {
+export function DiscoverTopics({
+  discoverPath = "/dashboard/discover",
+}: {
+  discoverPath?: string;
+}) {
   const searchParams = useSearchParams();
   const selectedTopic = searchParams.get("topic");
 
   return (
     <div className="flex gap-2 flex-wrap pb-2 -mx-1 px-1 ">
       <Link
-        href="/dashboard/discover"
+        href={discoverPath}
         className={cn(
           "shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors",
           !selectedTopic
@@ -25,7 +29,7 @@ export function DiscoverTopics() {
       {DISCOVER_TOPICS.map(({ slug, label }) => (
         <Link
           key={slug}
-          href={`/dashboard/discover?topic=${slug}`}
+          href={`${discoverPath}?topic=${slug}`}
           className={cn(
             "shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors",
             selectedTopic === slug

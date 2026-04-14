@@ -38,6 +38,7 @@ export default async function DashboardDiscoverPage({
     searchResult,
     trendingResult,
     newResult,
+    ,
     recommendedResult,
   ] = await Promise.all([
     getAllCreatorsForDiscovery(q, topic ?? undefined),

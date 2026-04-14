@@ -188,22 +188,12 @@ export default async function CreatorProfilePage({ params }: Props) {
                     View membership
                   </Link>
                 </Button>
-                {user ? (
-                  <SubscribeButton
-                    username={username}
-                    isSubscribed={isSubscribed}
-                    isPatron={isPatron}
-                    className="w-full sm:w-auto md:min-w-[10rem]"
-                  />
-                ) : (
-                  <Button
-                    asChild
-                    size="sm"
-                    className="w-full sm:w-auto md:min-w-[10rem]"
-                  >
-                    <Link href="/">Connect wallet</Link>
-                  </Button>
-                )}
+                <SubscribeButton
+                  username={username}
+                  isSubscribed={isSubscribed}
+                  isPatron={isPatron}
+                  className="w-full sm:w-auto md:min-w-[10rem]"
+                />
               </div>
             </div>
           </section>

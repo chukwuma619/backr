@@ -32,7 +32,7 @@ export function LandingHero() {
             <>
               <WalletConnect />
               <Button asChild variant="outline" size="lg">
-                <Link href="/dashboard/discover">Discover creators</Link>
+                <Link href="/discover">Discover creators</Link>
               </Button>
             </>
           )}

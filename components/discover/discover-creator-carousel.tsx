@@ -12,11 +12,13 @@ export function DiscoverCreatorCarousel({
   title,
   description,
   className,
+  requireWalletConnect = false,
 }: {
   creators: Creator[];
   title: string;
   description?: string;
   className?: string;
+  requireWalletConnect?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -68,7 +70,10 @@ export function DiscoverCreatorCarousel({
       >
         {creators.map((creator) => (
           <div key={creator.id} className="snap-start">
-            <DiscoverCreatorCard creator={creator} />
+            <DiscoverCreatorCard
+              creator={creator}
+              requireWalletConnect={requireWalletConnect}
+            />
           </div>
         ))}
       </div>
