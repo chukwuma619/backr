@@ -28,7 +28,12 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-border px-4 py-6 text-center text-sm text-muted-foreground">
-        <p>Creator membership on Nervos CKB</p>
+        <p className="mb-2">Creator membership on Nervos CKB</p>
+        <p>
+          <Link href="/fiber-setup" className="text-foreground underline underline-offset-4">
+            Run your own Fiber node
+          </Link>
+        </p>
       </footer>
     </div>
   );

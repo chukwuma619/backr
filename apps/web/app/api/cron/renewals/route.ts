@@ -13,12 +13,6 @@ import {
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-function getPatronFiberNodeUrl(userFiberNodeRpcUrl: string | null): string | null {
-  if (userFiberNodeRpcUrl) return userFiberNodeRpcUrl;
-  const envUrl = process.env.FIBER_PATRON_RPC_URL;
-  return envUrl && envUrl.trim() ? envUrl.trim() : null;
-}
-
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
@@ -59,12 +53,12 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
-    const patronNodeUrl = getPatronFiberNodeUrl(patronFiberNodeRpcUrl);
+    const patronNodeUrl = patronFiberNodeRpcUrl?.trim() || null;
     if (!patronNodeUrl) {
       results.push({
         id: patronage.id,
         status: "skipped",
-        reason: "Patron has no Fiber node configured (set FIBER_PATRON_RPC_URL for shared node)",
+        reason: "Patron has no Fiber node URL in Dashboard → Basic settings",
       });
       continue;
     }

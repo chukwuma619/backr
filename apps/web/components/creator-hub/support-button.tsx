@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,24 @@ export function SupportButton({ tier, creator }: SupportButtonProps) {
           </div>
         ) : (
           <>
+            <p className="text-muted-foreground text-sm">
+              Your Fiber node pays the invoice (<code className="text-xs">send_payment</code>). Add
+              its JSON-RPC URL in{" "}
+              <Link
+                href="/dashboard/settings/basic"
+                className="text-foreground underline underline-offset-4"
+              >
+                Basic settings
+              </Link>{" "}
+              or read the{" "}
+              <Link
+                href="/fiber-setup#supporters"
+                className="text-foreground underline underline-offset-4"
+              >
+                self-hosted setup guide
+              </Link>
+              .
+            </p>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <DialogFooter>
               <Button

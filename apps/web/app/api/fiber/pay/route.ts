@@ -11,12 +11,6 @@ import {
   getPlatformFeePercent,
 } from "@/lib/platform-fee";
 
-function getPatronFiberNodeUrl(userFiberNodeRpcUrl: string | null): string | null {
-  if (userFiberNodeRpcUrl) return userFiberNodeRpcUrl;
-  const envUrl = process.env.FIBER_PATRON_RPC_URL;
-  return envUrl && envUrl.trim() ? envUrl.trim() : null;
-}
-
 function paymentSucceeded(status: string): boolean {
   return status === "Succeeded" || status === "succeeded";
 }
@@ -50,12 +44,12 @@ export async function POST(request: NextRequest) {
     .where(eq(users.id, user.id))
     .limit(1);
 
-  const patronNodeUrl = getPatronFiberNodeUrl(userRow?.fiberNodeRpcUrl ?? null);
+  const patronNodeUrl = userRow?.fiberNodeRpcUrl?.trim() || null;
   if (!patronNodeUrl) {
     return NextResponse.json(
       {
         error:
-          "No Fiber node configured. Set FIBER_PATRON_RPC_URL or connect your Fiber node in settings.",
+          "Add your Fiber node JSON-RPC URL in Dashboard → Settings → Basic before subscribing.",
       },
       { status: 400 }
     );

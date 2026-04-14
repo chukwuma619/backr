@@ -1,0 +1,17 @@
+# Local / self-hosted Fiber node. Initialize keys and channel state per
+# https://docs.fiber.world/docs/quick-start/run-a-node — mount a volume with ./ckb/key etc.
+
+services:
+  fnn:
+    build: .
+    ports:
+      - "8227:8227"
+      - "8228:8228"
+    environment:
+      FIBER_SECRET_KEY_PASSWORD: ${FIBER_SECRET_KEY_PASSWORD:?set FIBER_SECRET_KEY_PASSWORD in .env}
+      RUST_LOG: ${RUST_LOG:-info}
+    volumes:
+      - fnn-data:/data
+
+volumes:
+  fnn-data:

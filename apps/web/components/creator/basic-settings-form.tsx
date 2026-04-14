@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,6 +32,7 @@ import {
 import { DISCOVER_TOPICS } from "@/lib/discover/constants";
 import { updateCreatorProfile } from "@/app/actions/creator";
 import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
+import { FiberSetupGuide } from "@/components/fiber-setup-guide";
 
 const schema = z.object({
   slug: z
@@ -118,7 +120,7 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
       <CardHeader>
         <CardTitle>Profile</CardTitle>
         <CardDescription>
-          Update your display name, handle, bio, and preferences.
+          Update your display name, handle, bio, and Fiber payments so supporters can subscribe.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -258,27 +260,40 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
                 </Field>
               )}
             />
-            <Controller
-              control={form.control}
-              name="fiberNodeRpcUrl"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="basic-settings-fiberNodeRpcUrl">
-                    Fiber node RPC URL (optional)
-                  </FieldLabel>
-                  <Input
-                    id="basic-settings-fiberNodeRpcUrl"
-                    type="url"
-                    placeholder="http://localhost:8227"
-                    {...field}
-                    aria-invalid={fieldState.invalid}
-                  />
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              )}
-            />
+            <div className="space-y-3">
+              <FiberSetupGuide variant="creator" />
+              <Controller
+                control={form.control}
+                name="fiberNodeRpcUrl"
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="basic-settings-fiberNodeRpcUrl">
+                      Your Fiber node JSON-RPC URL (required to get paid)
+                    </FieldLabel>
+                    <Input
+                      id="basic-settings-fiberNodeRpcUrl"
+                      type="url"
+                      placeholder="http://127.0.0.1:8227"
+                      {...field}
+                      aria-invalid={fieldState.invalid}
+                    />
+                    <p className="text-muted-foreground text-xs">
+                      Must be reachable from the Backr server for{" "}
+                      <code className="text-[0.7rem]">new_invoice</code>.{" "}
+                      <Link
+                        href="/fiber-setup#creators"
+                        className="text-foreground underline underline-offset-4"
+                      >
+                        Hosting steps
+                      </Link>
+                    </p>
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+            </div>
 
             <Field>
               <Button type="submit" disabled={form.formState.isSubmitting}>

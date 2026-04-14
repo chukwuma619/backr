@@ -23,6 +23,8 @@ import {
 import { updateAccount } from "@/app/actions/account";
 import { truncateAddress } from "@/lib/utils";
 import { PinataImageUploadField } from "@/components/pinata-image-upload-field";
+import { FiberSetupGuide } from "@/components/fiber-setup-guide";
+import Link from "next/link";
 
 const schema = z.object({
   avatarUrl: z.string().max(500).optional(),
@@ -102,7 +104,7 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
         <CardHeader>
           <CardTitle>Profile & preferences</CardTitle>
           <CardDescription>
-            Update your avatar and optional Fiber node URL.
+            Update your avatar. To pay creators with CKB via Fiber, connect your node URL below.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -134,27 +136,39 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
                   </Field>
                 )}
               />
-              <Controller
-                control={form.control}
-                name="fiberNodeRpcUrl"
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="basic-settings-fiberNodeRpcUrl">
-                      Fiber node RPC URL (optional)
-                    </FieldLabel>
-                    <Input
-                      id="basic-settings-fiberNodeRpcUrl"
-                      type="url"
-                      placeholder="http://localhost:8227"
-                      {...field}
-                      aria-invalid={fieldState.invalid}
-                    />
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </Field>
-                )}
-              />
+              <div className="space-y-3">
+                <FiberSetupGuide variant="patron" />
+                <Controller
+                  control={form.control}
+                  name="fiberNodeRpcUrl"
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="basic-settings-fiberNodeRpcUrl">
+                        Your Fiber node JSON-RPC URL
+                      </FieldLabel>
+                      <Input
+                        id="basic-settings-fiberNodeRpcUrl"
+                        type="url"
+                        placeholder="http://127.0.0.1:8227"
+                        {...field}
+                        aria-invalid={fieldState.invalid}
+                      />
+                      <p className="text-muted-foreground text-xs">
+                        Required for paying creators: your node runs <code className="text-[0.7rem]">send_payment</code>.{" "}
+                        <Link
+                          href="/fiber-setup#supporters"
+                          className="text-foreground underline underline-offset-4"
+                        >
+                          Fiber setup guide
+                        </Link>
+                      </p>
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
+                />
+              </div>
               <Field>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
                   {form.formState.isSubmitting ? "Saving…" : "Save changes"}
