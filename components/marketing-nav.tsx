@@ -28,6 +28,12 @@ const NAV_ITEMS = [
       pathname === "/discover" || pathname.startsWith("/discover/"),
   },
   {
+    href: "/docs",
+    label: "Help",
+    isActive: (pathname: string) =>
+      pathname === "/docs" || pathname.startsWith("/docs/"),
+  },
+  {
     href: "/fiber-setup",
     label: "Fiber setup",
     isActive: (pathname: string) =>

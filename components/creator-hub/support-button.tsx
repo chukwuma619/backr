@@ -106,7 +106,7 @@ export function SupportButton({ tier, creator }: SupportButtonProps) {
               </Link>{" "}
               or read the{" "}
               <Link
-                href="/fiber-setup#supporters"
+                href="/docs/fiber/members"
                 className="text-foreground underline underline-offset-4"
               >
                 self-hosted setup guide

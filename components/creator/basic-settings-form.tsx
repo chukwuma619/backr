@@ -281,7 +281,7 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
                       Must be reachable from the Backr server for{" "}
                       <code className="text-[0.7rem]">new_invoice</code>.{" "}
                       <Link
-                        href="/fiber-setup#creators"
+                        href="/docs/fiber/creators"
                         className="text-foreground underline underline-offset-4"
                       >
                         Hosting steps

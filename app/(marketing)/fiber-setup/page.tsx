@@ -1,21 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { fiberResources as fr } from "@/lib/docs/fiber-resources";
+
 export const metadata: Metadata = {
-  title: "Fiber node setup for Backr · Creators & supporters",
+  title: "Fiber setup for creators & members · Backr",
   description:
-    "Complete guide: run a Nervos Fiber Network Node, fund channels, expose JSON-RPC safely, and connect it to Backr for memberships and renewals.",
+    "For creators and members: run a Fiber node, fund channels, connect safely to Backr, and pay or receive memberships.",
 };
 
-const DOC_RUN_NODE = "https://docs.fiber.world/docs/quick-start/run-a-node";
-const DOC_CONNECT = "https://docs.fiber.world/docs/quick-start/connect-peers";
-const DOC_OPEN_CHANNEL = "https://docs.fiber.world/docs/quick-start/open-channel";
-const DOC_TRANSFER = "https://docs.fiber.world/docs/quick-start/basic-transfer";
-const DOC_CONNECT_PUBLIC = "https://docs.fiber.world/docs/quick-start/connect-nodes";
-const DOC_STABLECOIN = "https://docs.fiber.world/docs/quick-start/transfer-stablecoin";
-const FIBER_RELEASES = "https://github.com/nervosnetwork/fiber/releases";
-const FIBER_RPC_README =
-  "https://github.com/nervosnetwork/fiber/blob/develop/crates/fiber-lib/src/rpc/README.md";
+const DOC_RUN_NODE = fr.runNode;
+const DOC_BASIC_TRANSFER = fr.basicTransfer;
+const DOC_CONNECT_PUBLIC = fr.connectPublic;
+const DOC_STABLECOIN = fr.stablecoin;
+const FIBER_RELEASES = fr.fiberReleases;
+const FIBER_REPO_README = fr.fiberReadme;
+const FIBER_PUBLIC_NODES = fr.fiberPublicNodes;
+const CKB_PUBLIC_RPC = fr.ckbPublicRpc;
+const FIBER_RPC_README = fr.fiberRpcReadme;
 
 function ExternalLink({
   href,
@@ -38,6 +40,7 @@ function ExternalLink({
 
 const navItems = [
   { href: "#how-backr-uses-fiber", label: "How Backr uses Fiber" },
+  { href: "#before-backr", label: "Before it works with Backr" },
   { href: "#install-fnn", label: "Install FNN" },
   { href: "#keys-and-data", label: "Keys & data directory" },
   { href: "#liquidity", label: "Peers & channels" },
@@ -45,7 +48,7 @@ const navItems = [
   { href: "#creators", label: "Creators" },
   { href: "#supporters", label: "Supporters" },
   { href: "#checkout-flow", label: "Checkout & renewals" },
-  { href: "#fiber-tuning", label: "Server trust & payment tuning" },
+  { href: "#rpc-security", label: "Keep your node URL safe" },
   { href: "#troubleshooting", label: "Troubleshooting" },
   { href: "#reference", label: "Reference" },
 ];
@@ -62,14 +65,24 @@ export default function FiberSetupPage() {
           Fiber setup
         </p>
         <h1 className="text-foreground mb-4 text-2xl font-semibold tracking-tight md:text-3xl">
-          Fiber node setup for Backr
+          Fiber setup for creators &amp; members
         </h1>
+        <p className="text-muted-foreground mb-4 text-sm leading-relaxed">
+          <strong className="text-foreground">Prefer numbered steps first?</strong>{" "}
+          <Link href="/docs" className="text-foreground font-medium underline underline-offset-4">
+            Open Help &amp; docs
+          </Link>{" "}
+          — choose <Link href="/docs/fiber/creators" className="underline underline-offset-4">creators</Link>{" "}
+          or <Link href="/docs/fiber/members" className="underline underline-offset-4">members</Link>. This
+          page is the longer reference.
+        </p>
         <p className="text-muted-foreground mb-6 text-sm leading-relaxed">
-          Backr does not hold your CKB. Memberships use the{" "}
-          <ExternalLink href="https://docs.fiber.world/">Fiber Network</ExternalLink> on Nervos: your
-          app account stores a <strong className="text-foreground">JSON-RPC base URL</strong> for
-          your Fiber Network Node (FNN). The <strong className="text-foreground">Backr server</strong>{" "}
-          calls that URL—your browser does not talk to Fiber directly for checkout.
+          This page is for <strong className="text-foreground">you</strong> if you sell memberships
+          on Backr or support someone who does. Backr never holds your CKB. Payments use the{" "}
+          <ExternalLink href={fr.fiberDocs}>Fiber Network</ExternalLink> on Nervos. You run
+          a Fiber Network Node (FNN), then paste its <strong className="text-foreground">JSON-RPC base URL</strong>{" "}
+          in your Backr settings. When you subscribe or a renewal runs, Backr&apos;s systems call that
+          URL on your behalf—your browser does not send the Fiber payment itself.
         </p>
 
         <nav
@@ -90,35 +103,111 @@ export default function FiberSetupPage() {
 
         <section id="how-backr-uses-fiber" className="space-y-4 border-b border-border pb-10 scroll-mt-20">
           <h2 className="text-foreground text-lg font-semibold">
-            How Backr uses Fiber
+            What happens when someone pays
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            When someone subscribes or a renewal runs, Backr orchestrates JSON-RPC on{" "}
-            <strong className="text-foreground">each party&apos;s</strong> node:
+            Each side uses their own node. In short:
           </p>
           <ul className="text-muted-foreground list-disc space-y-2 pl-5 text-sm leading-relaxed">
             <li>
-              <strong className="text-foreground">Creator&apos;s FNN</strong> —{" "}
-              <code className="text-xs">new_invoice</code> for the tier amount (membership invoice).
+              <strong className="text-foreground">Creators</strong> — Backr asks your node to create
+              the membership invoice (<code className="text-xs">new_invoice</code>).
             </li>
             <li>
-              <strong className="text-foreground">Supporter&apos;s FNN</strong> —{" "}
-              <code className="text-xs">send_payment</code> to pay the creator&apos;s invoice.
+              <strong className="text-foreground">Members (supporters)</strong> — Backr asks your node
+              to pay that invoice (<code className="text-xs">send_payment</code>).
             </li>
           </ul>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            You must run FNN somewhere reachable from the Backr host (VPS, home server, etc.), fund
-            it, and open channels so payments can route—same idea as other channel networks. Official
-            walkthroughs:{" "}
+            You need a running node (home server, VPS, etc.), funded wallets, and open channels so the
+            payment can find a route—similar to other channel networks. Official walkthroughs:{" "}
             <ExternalLink href={DOC_RUN_NODE}>Run a Fiber Node</ExternalLink>,{" "}
-            <ExternalLink href={DOC_TRANSFER}>Basic transfer</ExternalLink>,{" "}
+            <ExternalLink href={DOC_BASIC_TRANSFER}>Basic transfer</ExternalLink>,{" "}
             <ExternalLink href={DOC_CONNECT_PUBLIC}>Connect public nodes (testnet)</ExternalLink>.
           </p>
         </section>
 
+        <section id="before-backr" className="space-y-4 border-b border-border pb-10 scroll-mt-20">
+          <h2 className="text-foreground text-lg font-semibold">
+            Before memberships work
+          </h2>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Backr only calls your saved URL to create or pay invoices. It does{" "}
+            <strong className="text-foreground">not</strong> open channels or pick peers for you—
+            you set that up on your node. Follow these steps so checkout and renewals succeed (see
+            also the{" "}
+            <ExternalLink href={FIBER_REPO_README}>Fiber README</ExternalLink> and{" "}
+            <ExternalLink href={FIBER_RPC_README}>RPC reference</ExternalLink> on GitHub):
+          </p>
+          <ol className="text-muted-foreground list-decimal space-y-3 pl-5 text-sm leading-relaxed">
+            <li>
+              <strong className="text-foreground">Same network for you and your audience.</strong>{" "}
+              Creators and members must all use the <strong className="text-foreground">same</strong>{" "}
+              Fiber environment (e.g. everyone on testnet, or everyone on mainnet). If one person is
+              on testnet and another on mainnet, payments will not work.
+            </li>
+            <li>
+              <strong className="text-foreground">Trusted CKB RPC in config.</strong> In your{" "}
+              <code className="text-xs">config.yml</code>, set <code className="text-xs">rpc_url</code>{" "}
+              to a CKB JSON-RPC endpoint you trust (see{" "}
+              <ExternalLink href={CKB_PUBLIC_RPC}>Nervos public RPC list</ExternalLink>). FNN needs this
+              for chain sync and on-chain funding flows.
+            </li>
+            <li>
+              <strong className="text-foreground">Prove a manual Fiber payment first.</strong> Follow
+              the official <ExternalLink href={DOC_BASIC_TRANSFER}>Basic transfer</ExternalLink> (includes
+              connect peers and open channel) until a payment succeeds outside Backr. If that fails, Backr cannot fix
+              it—you need routing, liquidity, or peers adjusted (see{" "}
+              <ExternalLink href={FIBER_PUBLIC_NODES}>public relay topology</ExternalLink> on GitHub
+              for how local nodes use relays on mainnet/testnet).
+            </li>
+            <li>
+              <strong className="text-foreground">Use a URL this website can reach.</strong> After you
+              set up HTTPS (or a VPN both you and this site share), test{" "}
+              <code className="text-xs">node_info</code> against the{" "}
+              <strong className="text-foreground">exact base URL</strong> you will paste—ideally from
+              another device or network. A URL that only works on your own computer (like{" "}
+              <code className="text-xs">127.0.0.1</code>) will not work for most people, because
+              Backr&apos;s servers are not on your laptop.
+            </li>
+            <li>
+              <strong className="text-foreground">Liquidity direction and headroom.</strong> Creators
+              need enough <strong className="text-foreground">inbound</strong> for the full tier price.
+              Supporters need enough <strong className="text-foreground">outbound</strong> for the
+              payment plus routing fees. Channel balances reserve on-chain CKB for closes (see{" "}
+              <ExternalLink href={FIBER_PUBLIC_NODES}>channel capacity notes</ExternalLink> in the Fiber
+              repo)—size channels larger than the subscription amount alone.
+            </li>
+            <li>
+              <strong className="text-foreground">Members: two payments in a row when a platform fee applies.</strong>{" "}
+              Some communities charge a small platform contribution on top of the creator&apos;s price.
+              When that is enabled, your node sends <strong className="text-foreground">two</strong>{" "}
+              payments when you subscribe—first to the creator, then the contribution. Leave enough
+              balance and channel capacity for both, and keep your node online.
+            </li>
+            <li>
+              <strong className="text-foreground">Wait after opening channels.</strong> If you see
+              routing errors immediately after <code className="text-xs">open_channel</code>, wait for
+              graph gossip to catch up before testing Backr (Fiber documents this pattern).
+            </li>
+            <li>
+              <strong className="text-foreground">Keep your node running for renewals.</strong>{" "}
+              Memberships try to renew on a regular schedule. If your node is off or unreachable,
+              that renewal may fail until you are back online with working channels.
+            </li>
+            <li>
+              <strong className="text-foreground">Plan FNN upgrades carefully.</strong> The Fiber
+              project warns that protocol and storage can change between releases—often you should close
+              channels or migrate before upgrading <code className="text-xs">fnn</code>. Read{" "}
+              <ExternalLink href={FIBER_REPO_README}>Compatibility / upgrade notes</ExternalLink> on
+              GitHub before replacing binaries on a funded node.
+            </li>
+          </ol>
+        </section>
+
         <section id="install-fnn" className="space-y-4 border-b border-border py-10 scroll-mt-20">
           <h2 className="text-foreground text-lg font-semibold">
-            1. Install and run FNN
+            2. Install and run FNN
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
             Follow <ExternalLink href={DOC_RUN_NODE}>Run a Fiber Node</ExternalLink>. Typical path:
@@ -131,7 +220,7 @@ export default function FiberSetupPage() {
               <ExternalLink href={FIBER_RELEASES}>GitHub Releases</ExternalLink> (match your OS/arch,
               e.g. <code className="text-xs">fnn_v0.8.0-x86_64-linux-portable.tar.gz</code> on many
               VPS), or build from the{" "}
-              <ExternalLink href="https://github.com/nervosnetwork/fiber">fiber</ExternalLink> repo.
+              <ExternalLink href={fr.fiberRepo}>fiber</ExternalLink> repo.
             </li>
             <li>
               Copy <code className="text-xs">config/testnet/config.yml</code> (or mainnet when you
@@ -168,7 +257,7 @@ export default function FiberSetupPage() {
 
         <section id="keys-and-data" className="space-y-4 border-b border-border py-10 scroll-mt-20">
           <h2 className="text-foreground text-lg font-semibold">
-            2. Keys and the <code className="text-xs font-normal">-d</code> data directory
+            3. Keys and the <code className="text-xs font-normal">-d</code> data directory
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
             Export a CKB private key with <code className="text-xs">ckb-cli</code> per the official
@@ -193,7 +282,7 @@ chmod 600 /var/lib/fnn/ckb/key`}
 
         <section id="liquidity" className="space-y-4 border-b border-border py-10 scroll-mt-20">
           <h2 className="text-foreground text-lg font-semibold">
-            3. Peers, channels, and liquidity
+            4. Peers, channels, and liquidity
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
             Invoices and <code className="text-xs">send_payment</code> only work when your node has a
@@ -201,13 +290,10 @@ chmod 600 /var/lib/fnn/ckb/key`}
           </p>
           <ul className="text-muted-foreground list-disc space-y-2 pl-5 text-sm leading-relaxed">
             <li>
-              <ExternalLink href={DOC_CONNECT}>Connect to peers</ExternalLink>
-            </li>
-            <li>
-              <ExternalLink href={DOC_OPEN_CHANNEL}>Open a channel</ExternalLink>
-            </li>
-            <li>
-              <ExternalLink href={DOC_TRANSFER}>Basic transfer</ExternalLink> (prove end-to-end)
+              <ExternalLink href={DOC_BASIC_TRANSFER}>
+                Basic transfer — connect peers, open a channel, pay an invoice
+              </ExternalLink>{" "}
+              (single official walkthrough; there are no separate peer/channel pages)
             </li>
             <li>
               Testnet bootstrap:{" "}
@@ -234,48 +320,49 @@ chmod 600 /var/lib/fnn/ckb/key`}
             If you see routing errors right after opening a channel, wait for gossip to catch up (Fiber
             docs note this for <code className="text-xs">Failed to build route</code>).
           </p>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Mainnet relay pubkeys and multi-hop examples live in the Fiber repo:{" "}
+            <ExternalLink href={FIBER_PUBLIC_NODES}>Public nodes user manual</ExternalLink>.
+          </p>
         </section>
 
         <section id="expose-rpc" className="space-y-4 border-b border-border py-10 scroll-mt-20">
           <h2 className="text-foreground text-lg font-semibold">
-            4. Expose JSON-RPC so Backr can call your node
+            5. Expose JSON-RPC so Backr can call your node
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Backr&apos;s server <code className="text-xs">POST</code>s JSON-RPC to the{" "}
-            <strong className="text-foreground">base URL</strong> you save (no path after host/port).
-            Examples: <code className="text-xs">https://fiber.example.com</code>, or{" "}
-            <code className="text-xs">http://127.0.0.1:8227</code> only when Backr runs on the same
-            machine as FNN (local dev).
+            Backr sends JSON-RPC to the <strong className="text-foreground">base URL</strong> you
+            save—just the origin, no path after the host (example:{" "}
+            <code className="text-xs">https://fiber.example.com</code>).
           </p>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            <strong className="text-foreground">Production pattern:</strong> bind RPC to loopback on
-            the VPS, run <strong className="text-foreground">nginx</strong> (or Caddy) with HTTPS on
-            a hostname, proxy to <code className="text-xs">127.0.0.1:8227</code>, and add firewall +
-            rate limits / allowlists where you can. RPC can move funds—treat it like a signing
-            endpoint; do not leave it wide open without controls.
+            <strong className="text-foreground">Typical setup:</strong> run the node on a VPS or home
+            server, keep the Fiber RPC port bound to localhost, and put{" "}
+            <strong className="text-foreground">nginx</strong> or Caddy in front with HTTPS. Point
+            your domain at that proxy, which forwards to <code className="text-xs">127.0.0.1:8227</code>.
+            Use a firewall and tight access rules where you can—this endpoint can move funds.
           </p>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            <strong className="text-foreground">Optional:</strong> same Tailnet as a self-hosted
-            Backr → private URL (e.g. <code className="text-xs">http://100.x.y.z:8227</code>). Hosted
-            Backr (e.g. Vercel) needs a URL reachable from the public internet unless you add a
-            tunnel/proxy you control.
+            <strong className="text-foreground">Reachability:</strong> this site needs to reach your
+            URL from the internet, unless you use a private network (for example Tailscale) that both
+            you and this Backr instance share. If you are not sure, ask whoever runs this community.
           </p>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Method reference:{" "}
+            Technical method list:{" "}
             <ExternalLink href={FIBER_RPC_README}>Fiber RPC README</ExternalLink>.
           </p>
         </section>
 
         <section id="creators" className="space-y-4 border-b border-border py-10 scroll-mt-20">
           <h2 className="text-foreground text-lg font-semibold">
-            5. Creators — checklist
+            6. Creators — checklist
           </h2>
           <ol className="text-muted-foreground list-decimal space-y-2 pl-5 text-sm leading-relaxed">
             <li>Run FNN with funded wallet and testnet/mainnet config you intend to use.</li>
             <li>Connect peers and open channels; confirm you can receive (inbound liquidity).</li>
             <li>
-              Expose a <strong className="text-foreground">stable HTTPS base URL</strong> to your RPC
-              (recommended) or a controlled internal URL if your hosting allows it.
+              Expose a <strong className="text-foreground">stable HTTPS URL</strong> (or a shared
+              private network URL) that this site can call.
             </li>
             <li>
               In Backr, open{" "}
@@ -288,13 +375,17 @@ chmod 600 /var/lib/fnn/ckb/key`}
               and paste <strong className="text-foreground">Your Fiber node JSON-RPC URL</strong>.
               Without it, supporters cannot complete checkout for your tiers.
             </li>
+            <li>
+              Run <code className="text-xs">node_info</code> against the <strong className="text-foreground">same URL</strong>{" "}
+              you will paste (see &quot;Before memberships work&quot; above).
+            </li>
             <li>Create tiers and test a small subscription with a second account that has its own FNN.</li>
           </ol>
         </section>
 
         <section id="supporters" className="space-y-4 border-b border-border py-10 scroll-mt-20">
           <h2 className="text-foreground text-lg font-semibold">
-            6. Supporters — checklist
+            7. Supporters — checklist
           </h2>
           <ol className="text-muted-foreground list-decimal space-y-2 pl-5 text-sm leading-relaxed">
             <li>Run your own FNN (or one you fully control) with keys and data dir set correctly.</li>
@@ -309,8 +400,12 @@ chmod 600 /var/lib/fnn/ckb/key`}
                 Dashboard → Settings → Basic
               </Link>{" "}
               and save <strong className="text-foreground">Your Fiber node JSON-RPC URL</strong>.
-              Backr requires this for paying creators; there is no shared custodial patron node in the
-              product model.
+              Each member needs their own node and URL so payments come from their wallet.
+            </li>
+            <li>
+              If this community uses a platform contribution on top of the creator price, expect{" "}
+              <strong className="text-foreground">two</strong> payments from your node when you
+              subscribe—keep extra outbound capacity.
             </li>
             <li>Visit a creator, choose a tier, and use Support — your node will execute send_payment.</li>
           </ol>
@@ -318,7 +413,7 @@ chmod 600 /var/lib/fnn/ckb/key`}
 
         <section id="checkout-flow" className="space-y-4 border-b border-border py-10 scroll-mt-20">
           <h2 className="text-foreground text-lg font-semibold">
-            7. What happens on subscribe and renewal
+            8. What happens on subscribe and renewal
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
             <strong className="text-foreground">First checkout:</strong> Backr (server) asks the
@@ -328,43 +423,37 @@ chmod 600 /var/lib/fnn/ckb/key`}
           </p>
           <p className="text-muted-foreground text-sm leading-relaxed">
             If the node returns <code className="text-xs">Created</code> or{" "}
-            <code className="text-xs">Inflight</code>, the Backr server keeps calling{" "}
-            <code className="text-xs">get_payment</code> until the payment reaches{" "}
-            <code className="text-xs">Success</code> or <code className="text-xs">Failed</code> (or
-            until a configurable timeout — see below).
+            <code className="text-xs">Inflight</code>, Backr keeps checking until the payment finishes
+            successfully or fails (or until a time limit is reached).
           </p>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            <strong className="text-foreground">Renewals:</strong> the app&apos;s cron job repeats a
-            similar flow on the schedule your host configures. If your Fiber URL is missing or your
-            node cannot pay, that renewal may be skipped until you fix liquidity or settings.
+            <strong className="text-foreground">Renewals:</strong> Backr tries to charge again on a
+            regular schedule (often about once per day). Keep your node online, your URL saved in
+            settings, and enough liquidity—otherwise a renewal may fail until you fix it.
           </p>
         </section>
 
-        <section id="fiber-tuning" className="space-y-4 border-b border-border py-10 scroll-mt-20">
+        <section id="rpc-security" className="space-y-4 border-b border-border py-10 scroll-mt-20">
           <h2 className="text-foreground text-lg font-semibold">
-            8. Server trust, RPC safety, and optional payment tuning
+            9. Keep your node URL safe
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Treat your JSON-RPC URL like a signing surface: use HTTPS, firewalls, and allowlists where
-            you can (see section 4). Backr only stores the URL you provide and calls it from the server.
+            Anyone who can call your JSON-RPC URL can ask your node to move funds. Use HTTPS, lock
+            down who can reach the port (firewall, VPN, or allowlist), and do not share the URL in
+            public places. Backr stores only the URL you enter and uses it to complete memberships you
+            start or renewals you are due for—same idea as section 5.
           </p>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Private last hops: set <code className="text-xs">hop_hints</code> via{" "}
-            <code className="text-xs">FIBER_SEND_PAYMENT_HOP_HINTS</code> or{" "}
-            <code className="text-xs">sendPaymentOptions</code> on{" "}
-            <code className="text-xs">POST /api/fiber/pay</code> (
-            <ExternalLink href={FIBER_RPC_README}>Fiber RPC README</ExternalLink>).
-          </p>
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            Tuning env vars are listed in <code className="text-xs">.env.example</code> (poll interval,
-            max wait, fee caps). <code className="text-xs">FIBER_INVOICE_API_ENABLED</code> gates the
-            invoice-only debug route (off by default; requires sign-in when on).
+            If payments fail with routing errors and you rely on private or unusual channel setups,
+            Fiber&apos;s docs discuss <strong className="text-foreground">routing hints</strong>—
+            your node logs and the{" "}
+            <ExternalLink href={FIBER_RPC_README}>RPC README</ExternalLink> are the place to dig in.
           </p>
         </section>
 
         <section id="troubleshooting" className="space-y-4 border-b border-border py-10 scroll-mt-20">
           <h2 className="text-foreground text-lg font-semibold">
-            9. Troubleshooting
+            10. Troubleshooting
           </h2>
           <ul className="text-muted-foreground list-disc space-y-3 pl-5 text-sm leading-relaxed">
             <li>
@@ -378,17 +467,14 @@ chmod 600 /var/lib/fnn/ckb/key`}
               public URL.
             </li>
             <li>
-              <strong className="text-foreground">Route / payment errors</strong> — wait for channel
-              graph sync; confirm channel is <code className="text-xs">ChannelReady</code>; check
-              balances and peer connectivity (Fiber docs). For private last hops, configure{" "}
-              <code className="text-xs">hop_hints</code> (env or <code className="text-xs">sendPaymentOptions</code>).
+              <strong className="text-foreground">Route / payment errors</strong> — wait for the
+              channel graph to catch up; confirm your channel is ready; check balances and peers
+              (Fiber docs). Unusual private paths may need routing hints—see the RPC README.
             </li>
             <li>
-              <strong className="text-foreground">Checkout times out while Fiber still settling</strong>{" "}
-              — increase <code className="text-xs">FIBER_PAYMENT_MAX_WAIT_MS</code> and/or{" "}
-              <code className="text-xs">FIBER_SEND_PAYMENT_TIMEOUT_SECONDS</code>; ensure your host allows
-              long enough function duration for <code className="text-xs">/api/fiber/pay</code> (Backr sets a
-              high <code className="text-xs">maxDuration</code> for this route).
+              <strong className="text-foreground">Checkout hangs then errors</strong> — the network
+              may still be catching up; retry after a few minutes. If it keeps failing, check
+              liquidity and that your URL is reachable from the internet (or your shared VPN).
             </li>
             <li>
               <strong className="text-foreground">Wrong key path</strong> — key file must live under
@@ -400,13 +486,13 @@ chmod 600 /var/lib/fnn/ckb/key`}
         </section>
 
         <section id="reference" className="space-y-4 pt-10 scroll-mt-20">
-          <h2 className="text-foreground text-lg font-semibold">10. Reference</h2>
+          <h2 className="text-foreground text-lg font-semibold">11. Reference</h2>
           <ul className="text-muted-foreground list-disc space-y-2 pl-5 text-sm leading-relaxed">
             <li>
               <ExternalLink href={DOC_RUN_NODE}>Run a Fiber Node</ExternalLink>
             </li>
             <li>
-              <ExternalLink href={DOC_TRANSFER}>Basic transfer example</ExternalLink>
+              <ExternalLink href={DOC_BASIC_TRANSFER}>Basic transfer example</ExternalLink>
             </li>
             <li>
               <ExternalLink href={DOC_CONNECT_PUBLIC}>Connect public nodes (testnet)</ExternalLink>
@@ -415,11 +501,20 @@ chmod 600 /var/lib/fnn/ckb/key`}
               <ExternalLink href={DOC_STABLECOIN}>Transfer stablecoins</ExternalLink>
             </li>
             <li>
-              <ExternalLink href="https://docs.fiber.world/">docs.fiber.world</ExternalLink> — full
+              <ExternalLink href={fr.fiberDocs}>docs.fiber.world</ExternalLink> — full
               index
             </li>
             <li>
               <ExternalLink href={FIBER_RPC_README}>Fiber RPC README</ExternalLink>
+            </li>
+            <li>
+              <ExternalLink href={FIBER_REPO_README}>Fiber README (build, keys, upgrades)</ExternalLink>
+            </li>
+            <li>
+              <ExternalLink href={FIBER_PUBLIC_NODES}>Fiber public nodes (mainnet/testnet relays)</ExternalLink>
+            </li>
+            <li>
+              <ExternalLink href={CKB_PUBLIC_RPC}>CKB public JSON-RPC nodes</ExternalLink>
             </li>
           </ul>
         </section>

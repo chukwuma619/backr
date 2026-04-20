@@ -156,7 +156,7 @@ export function BasicSettingsForm({ data }: BasicSettingsFormProps) {
                       <p className="text-muted-foreground text-xs">
                         Required for paying creators: your node runs <code className="text-[0.7rem]">send_payment</code>.{" "}
                         <Link
-                          href="/fiber-setup#supporters"
+                          href="/docs/fiber/members"
                           className="text-foreground underline underline-offset-4"
                         >
                           Fiber setup guide
